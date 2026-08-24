@@ -33,8 +33,8 @@ function notaValida(overrides = {}) {
 test("writerAgent + notesArchive: un appunto scritto è poi elencabile e leggibile", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
-        const archivista = { selezionaCartella: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+        const archivist = { selectFolder: () => "react" };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
 
         const scritta = await writer.write(notaValida());
 
@@ -57,8 +57,8 @@ test("writerAgent + notesArchive: un appunto scritto è poi elencabile e leggibi
 test("writerAgent: un titolo con backslash e newline produce un frontmatter YAML valido", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
-        const archivista = { selezionaCartella: () => "regex" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+        const archivist = { selectFolder: () => "regex" };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
 
         // "\d" letterale (comune in un appunto su regex) e una newline reale nel
         // titolo: senza escaping corretto il backslash lascia le virgolette non
@@ -87,8 +87,8 @@ test("writerAgent: un titolo con backslash e newline produce un frontmatter YAML
 test("writerAgent: un titolo con tentativo di path traversal produce comunque un file contenuto nella notesDir", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
-        const archivista = { selezionaCartella: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+        const archivist = { selectFolder: () => "react" };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
 
         const scritta = await writer.write(notaValida({ titolo: "../../../etc/passwd" }));
         const percorsoRisolto = path.resolve(scritta.percorso);

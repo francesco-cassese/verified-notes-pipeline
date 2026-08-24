@@ -73,7 +73,7 @@ function resolveCartella(modulo, logger) {
 
     if (cartella) return cartella;
 
-    logger?.warn("archivistaAgent", "Modulo non presente nella mappa, uso slug diretto", { modulo });
+    logger?.warn("archivistAgent", "Modulo non presente nella mappa, uso slug diretto", { modulo });
     return slugify(modulo);
 }
 

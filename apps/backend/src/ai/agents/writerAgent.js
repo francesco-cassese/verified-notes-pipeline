@@ -113,14 +113,14 @@ function buildMarkdown(note, meta) {
     return `${frontmatter}\n\n${corpo}`;
 }
 
-function createWriterAgent({ notesDir, logger, archivista }) {
+function createWriterAgent({ notesDir, logger, archivist }) {
     async function write(note) {
         // La cartella non è più lo slug grezzo del modulo dedotto dal modello,
-        // ma quella scelta dall'Archivista tramite il mapping hardcoded (o il
+        // ma quella scelta dall'Archivist tramite il mapping hardcoded (o il
         // fallback allo slug se il modulo non è ancora mappato). titolo e
         // cartella passano comunque per resolveSafeNotePath, che li slugifica
         // di nuovo (idempotente) e verifica il contenimento come prima.
-        const cartellaCanonica = archivista.selezionaCartella(note.modulo);
+        const cartellaCanonica = archivist.selectFolder(note.modulo);
         const { filePath, fileName, cartella, percorsoRelativo } = resolveSafeNotePath(notesDir, note.titolo, cartellaCanonica);
 
         const id = crypto.randomUUID();

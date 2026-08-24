@@ -28,14 +28,14 @@ function notaValida(overrides = {}) {
     };
 }
 
-test("write: usa la cartella scelta dall'archivista, non lo slug diretto del modulo", async () => {
+test("write: usa la cartella scelta dall'archivist, non lo slug diretto del modulo", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
-        // "React.js" slugificato darebbe "react-js": l'archivista qui restituisce
+        // "React.js" slugificato darebbe "react-js": l'archivist qui restituisce
         // deliberatamente qualcos'altro, per verificare che write() usi il suo
         // risultato e non ricalcoli la cartella da sé.
-        const archivista = { selezionaCartella: (modulo) => { assert.equal(modulo, "React.js"); return "react"; } };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+        const archivist = { selectFolder: (modulo) => { assert.equal(modulo, "React.js"); return "react"; } };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
 
         const scritta = await writer.write(notaValida());
 
@@ -49,8 +49,8 @@ test("write: usa la cartella scelta dall'archivista, non lo slug diretto del mod
 test("write: il markdown include tutte le sezioni attese e omette il glossario se vuoto", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
-        const archivista = { selezionaCartella: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+        const archivist = { selectFolder: () => "react" };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
 
         const scritta = await writer.write(notaValida({ glossario: [] }));
         const contenuto = await fs.readFile(scritta.percorso, "utf-8");
@@ -70,8 +70,8 @@ test("write: il markdown include tutte le sezioni attese e omette il glossario s
 test("write: il markdown include il glossario quando presente", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
-        const archivista = { selezionaCartella: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+        const archivist = { selectFolder: () => "react" };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
 
         const scritta = await writer.write(notaValida({
             glossario: [{ termine: "Hook", definizioneFormale: "Funzione che aggancia stato/lifecycle.", spiegazioneInformale: "Un modo per usare stato nei componenti funzione." }],
@@ -88,8 +88,8 @@ test("write: il markdown include il glossario quando presente", async () => {
 test("write: fonti vuote mostrano il messaggio placeholder invece di una lista vuota", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
-        const archivista = { selezionaCartella: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+        const archivist = { selectFolder: () => "react" };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
 
         const scritta = await writer.write(notaValida({ fonti: [] }));
         const contenuto = await fs.readFile(scritta.percorso, "utf-8");
@@ -103,8 +103,8 @@ test("write: fonti vuote mostrano il messaggio placeholder invece di una lista v
 test("write: il risultato include i metadati generati (id, creatoIl, nomeFile, percorsoRelativo)", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
-        const archivista = { selezionaCartella: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+        const archivist = { selectFolder: () => "react" };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
 
         const scritta = await writer.write(notaValida());
 

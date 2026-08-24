@@ -20,7 +20,7 @@ test("resolveCartella: modulo non mappato ricade sullo slug e avvisa il logger",
 
     assert.equal(cartella, "zig-lang");
     assert.equal(warnings.length, 1);
-    assert.equal(warnings[0].scope, "archivistaAgent");
+    assert.equal(warnings[0].scope, "archivistAgent");
 });
 
 test("resolveCartella: funziona anche senza logger", () => {
