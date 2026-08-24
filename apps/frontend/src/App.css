@@ -1,0 +1,516 @@
+/* --- Layout condiviso --- */
+
+.page {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+}
+
+@media (max-width: 640px) {
+    .page {
+        padding: 1.5rem 1rem 3rem;
+    }
+}
+
+h1 {
+    font-size: 1.9rem;
+    margin: 0 0 0.4rem;
+}
+
+@media (max-width: 640px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+}
+
+.sottotitolo {
+    color: var(--muted);
+    margin: 0 0 1.75rem;
+    font-size: 1.05rem;
+}
+
+/* --- Navbar --- */
+
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.navbar-inner {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    min-height: var(--navbar-height);
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+}
+
+.navbar-brand {
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    padding: 0.6rem 0;
+}
+
+.navbar-links {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.navbar-links a {
+    text-decoration: none;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 1rem 0;
+    border-bottom: 2px solid transparent;
+}
+
+.navbar-links a.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+@media (max-width: 480px) {
+    .navbar-inner {
+        min-height: auto;
+        padding: 0.6rem 1rem;
+    }
+
+    .navbar-links {
+        gap: 1rem;
+    }
+
+    .navbar-links a {
+        padding: 0.3rem 0;
+    }
+}
+
+/* --- Form generazione --- */
+
+form {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 560px) {
+    form {
+        flex-direction: column;
+    }
+}
+
+input[type="text"] {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1rem;
+    min-width: 0;
+}
+
+input[type="text"]:focus {
+    outline: 3px solid var(--accent);
+    outline-offset: 1px;
+}
+
+button {
+    padding: 0.75rem 1.4rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.stato-generazione {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    min-height: 1.4em;
+}
+
+.errore {
+    background: var(--error-bg);
+    color: var(--error);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    font-size: 1rem;
+    white-space: pre-wrap;
+    margin-bottom: 1.5rem;
+}
+
+/* --- Conferma salvataggio --- */
+
+.conferma-salvataggio {
+    background: var(--success-bg);
+    border: 1px solid var(--success);
+    border-radius: 14px;
+    padding: 1.5rem 1.6rem;
+}
+
+.conferma-titolo {
+    color: var(--success);
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin: 0 0 0.5rem;
+}
+
+.conferma-nota-titolo {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem;
+}
+
+.conferma-percorso {
+    color: var(--muted);
+    font-size: 0.9rem;
+    font-family: ui-monospace, Consolas, monospace;
+    margin: 0 0 1.1rem;
+    word-break: break-all;
+}
+
+.conferma-azioni {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+}
+
+.conferma-azioni a {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.conferma-azioni a:hover {
+    text-decoration: underline;
+}
+
+/* --- Archivio: griglia cartelle --- */
+
+.titolo-cartella {
+    text-transform: capitalize;
+}
+
+.breadcrumb {
+    display: inline-block;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb:hover {
+    text-decoration: underline;
+}
+
+.cartelle-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 1rem;
+}
+
+.cartella-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.15s ease;
+}
+
+.cartella-card:hover {
+    border-color: var(--accent);
+}
+
+.cartella-nome {
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-transform: capitalize;
+}
+
+.cartella-conteggio {
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
+/* --- Archivio: elenco appunti --- */
+
+.appunti-lista {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+}
+
+.appunto-riga {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.15s ease;
+}
+
+.appunto-riga:hover {
+    border-color: var(--accent);
+}
+
+.appunto-titolo {
+    font-weight: 600;
+}
+
+.appunto-data {
+    color: var(--muted);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+    .appunto-riga {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+}
+
+/* --- Nota (vista strutturata: generazione JSON) --- */
+
+.nota {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem 1.9rem;
+}
+
+@media (max-width: 640px) {
+    .nota {
+        padding: 1.25rem 1.3rem;
+    }
+}
+
+.nota h2 {
+    margin-top: 0.4rem;
+    font-size: 1.5rem;
+}
+
+.modulo-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-radius: 6px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.meta {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.25rem;
+}
+
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.tag {
+    background: var(--chip-bg);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.9rem;
+}
+
+.indice {
+    border-top: 1px solid var(--border);
+    padding-top: 1.1rem;
+    margin-bottom: 1.25rem;
+}
+
+.indice h3 {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.indice ol {
+    margin: 0;
+    padding-left: 1.3rem;
+}
+
+.indice a {
+    color: var(--accent);
+}
+
+.sezione {
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    margin-bottom: 1.25rem;
+    scroll-margin-top: calc(var(--navbar-height) + 1rem);
+}
+
+.sezione h3 {
+    margin: 0 0 0.6rem;
+    font-size: 1.15rem;
+}
+
+.sezione-contenuto {
+    line-height: 1.65;
+    font-size: 1rem;
+}
+
+/* Annidato dentro una sezione già titolata: niente margine extra in cima. */
+.sezione-contenuto .markdown-viewer {
+    margin-top: 0;
+}
+
+.fonti, .takeaways, .glossario {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-bottom: 1.25rem;
+    scroll-margin-top: calc(var(--navbar-height) + 1rem);
+}
+
+.fonti h3, .takeaways h3, .glossario h3 {
+    margin: 0 0 0.6rem;
+    font-size: 1.15rem;
+}
+
+.fonti ul, .takeaways ul {
+    margin: 0;
+    padding-left: 1.3rem;
+}
+
+.fonti li + li, .takeaways li + li {
+    margin-top: 0.3rem;
+}
+
+.fonti a {
+    color: var(--accent);
+}
+
+.glossario {
+    overflow-x: auto;
+}
+
+.glossario table {
+    width: 100%;
+    min-width: 28rem;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.glossario th, .glossario td {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+.glossario th {
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.nomefile {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    color: var(--muted);
+}
+
+/* --- Markdown viewer (vista fallback: appunti pre-esistenti senza sidecar JSON) --- */
+
+.markdown-viewer {
+    margin-top: 1.25rem;
+    line-height: 1.65;
+    font-size: 1rem;
+}
+
+.markdown-viewer h2 {
+    font-size: 1.3rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    margin: 1.5rem 0 0.75rem;
+}
+
+.markdown-viewer h2:first-child {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.markdown-viewer p {
+    margin: 0 0 1rem;
+}
+
+.markdown-viewer ul, .markdown-viewer ol {
+    padding-left: 1.3rem;
+}
+
+.markdown-viewer a {
+    color: var(--accent);
+}
+
+.markdown-viewer pre {
+    background: var(--chip-bg);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.markdown-viewer code {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.9em;
+}
+
+.markdown-viewer pre code {
+    font-size: 0.85rem;
+}
+
+.markdown-viewer table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.markdown-viewer th, .markdown-viewer td {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+}
