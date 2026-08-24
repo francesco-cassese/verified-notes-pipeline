@@ -73,7 +73,7 @@ ${formattaFonti(risultatiRicerca)}
 
 Basa i fatti, la sintassi e gli esempi che scrivi sugli estratti forniti sopra, non sulla tua conoscenza pregressa: se un estratto è disponibile e contraddice quello che ricordi, segui l'estratto (potrebbe essere più aggiornato). Se per una fonte l'estratto non è disponibile, resta prudente e generico sui dettagli specifici di quella pagina invece di inventarli.
 
-Non nominare, confrontare o suggerire come alternativa altre funzioni, metodi, classi o linguaggi diversi da "${argomento}", anche se corretti secondo la tua conoscenza pregressa, a meno che compaiano esplicitamente negli estratti forniti sopra: resta strettamente nel perimetro di "${argomento}", senza divagazioni comparative.
+Non nominare, confrontare o suggerire come alternativa altre funzioni, metodi, classi o linguaggi diversi da "${argomento}", anche se corretti secondo la tua conoscenza pregressa o descritti in una delle fonti trovate: resta strettamente nel perimetro di "${argomento}", senza divagazioni comparative. Questo vale anche se una delle pagine trovate dalla ricerca è in realtà la documentazione di un'altra funzione/metodo/hook correlato ma distinto (es. una variante più avanzata, o un'API citata come riferimento incrociato nella stessa documentazione): il suo estratto non è materiale da cui attingere fatti, sintassi o esempi per questo appunto, resta valido solo per l'eventuale accenno di una frase già previsto sopra.
 
 Nel campo "fonti" riporta solo ed esclusivamente URL presi da questo elenco (massimo 10). Non citare altre pagine anche se le conosci: se non compaiono in questo elenco non sono ammesse.${formattaFeedback(feedback)}`;
 }
