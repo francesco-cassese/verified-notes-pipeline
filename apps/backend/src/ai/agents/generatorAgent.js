@@ -1,0 +1,127 @@
+import { NoteDraftSchema } from "../schemas/note.schemas.js";
+import { AgentError, ErrorCodes } from "../../utils/errors.js";
+
+function formattaFonti(risultati) {
+    return risultati
+        .map((r) => {
+            if (!r.contenuto) return `- ${r.title}: ${r.url} (estratto non disponibile)`;
+            return `- ${r.title}: ${r.url}\n  Estratto della pagina:\n  """\n  ${r.contenuto}\n  """`;
+        })
+        .join("\n\n");
+}
+
+function formattaFeedback(feedback) {
+    if (!feedback || feedback.length === 0) return "";
+    const elenco = feedback.map((f) => `- ${f}`).join("\n");
+    return `\n\nIl tentativo precedente non ha superato la validazione per questi motivi, correggili:\n${elenco}`;
+}
+
+// A questo punto risultatiRicerca è sempre non vuoto: se non ci sono fonti
+// ufficiali, generate() interrompe prima di arrivare qui (vedi sotto).
+// Il vincolo "solo ufficiali" viene comunque istruito esplicitamente qui e
+// imposto di nuovo, in modo deterministico, dal Validator via FonteSchema:
+// due strati di difesa contro il rischio che il modello citi una fonte a
+// memoria non verificata invece di una di quelle fornite.
+function buildPrompt(argomento, risultatiRicerca, feedback) {
+    return `Genera un appunto tecnico di programmazione, in italiano, con tono professionale e diretto (niente ironia o linguaggio scherzoso), sull'argomento: "${argomento}".
+
+Usa un linguaggio semplice e chiaro, adatto a uno studente che sta muovendo i primi passi su questo argomento: frasi brevi, dirette, senza fronzoli. Se usi un termine tecnico non ovvio, spiegalo subito la prima volta che compare, con parole semplici, invece di darlo per scontato. Preferisci esempi concreti a descrizioni astratte.
+
+Struttura l'appunto seguendo esattamente questi campi:
+
+- "modulo": la categoria/tecnologia principale a cui appartiene l'argomento, dedotta da te (es. "React", "Git", "Python", "PostgreSQL").
+- "titolo": un titolo chiaro e specifico per l'appunto (non deve coincidere necessariamente con l'argomento richiesto).
+- "sezioni": da 2 a 6 sezioni, ciascuna con un "titolo" breve e un "contenuto" approfondito in Markdown. Copri concetti, sintassi/esempi pratici e casi d'uso. Ogni esempio di codice, anche una singola riga, va SEMPRE racchiuso in un blocco di codice Markdown con i backtick tripli e il linguaggio indicato (es. \`\`\`php\n$x = 1;\n\`\`\`), mai scritto come testo semplice: senza le triple backtick le andate a capo vengono perse e il codice diventa illeggibile. Non dedicare qui una sezione agli errori comuni: vanno nel campo "erroriComuni" descritto sotto.
+- "keyTakeaways": da 3 a 6 punti chiave da ricordare, frasi brevi e dirette.
+- "glossario": SOLO se l'argomento introduce termini tecnici non ovvi, una lista di voci con "termine", "definizioneFormale" (rigorosa) e "spiegazioneInformale" (la stessa idea spiegata in modo semplice e diretto, senza tecnicismi). Se non ci sono termini che meritano una voce a parte, lascia questo campo come lista vuota.
+- "erroriComuni": da 2 a 6 errori tipici in cui incorre chi usa "${argomento}" per la prima volta (errori di sintassi, fraintendimenti concettuali, casi limite dimenticati), ciascuno con "errore" (cosa si sbaglia, breve) e "soluzione" (come evitarlo o correggerlo, in modo pratico e diretto). Vale anche qui il vincolo di perimetro spiegato sotto: non nominare funzioni, metodi o strumenti alternativi a "${argomento}", nemmeno come suggerimento nella soluzione.
+- "tag": alcune parole chiave pertinenti (massimo 5).
+
+Calibra la profondità sul livello implicito dall'argomento stesso: trattalo come primo contatto per chi lo sta imparando ora. Puoi accennare con una frase a concetti collegati più avanzati (per dare contesto), ma non spiegarli o approfondirli: se meritano una spiegazione corposa, appartengono a un appunto successivo, non a questo.
+
+Le seguenti pagine ufficiali sono state trovate tramite ricerca web, alcune con un estratto del loro contenuto:
+${formattaFonti(risultatiRicerca)}
+
+Basa i fatti, la sintassi e gli esempi che scrivi sugli estratti forniti sopra, non sulla tua conoscenza pregressa: se un estratto è disponibile e contraddice quello che ricordi, segui l'estratto (potrebbe essere più aggiornato). Se per una fonte l'estratto non è disponibile, resta prudente e generico sui dettagli specifici di quella pagina invece di inventarli.
+
+Non nominare, confrontare o suggerire come alternativa altre funzioni, metodi, classi o linguaggi diversi da "${argomento}", anche se corretti secondo la tua conoscenza pregressa, a meno che compaiano esplicitamente negli estratti forniti sopra: resta strettamente nel perimetro di "${argomento}", senza divagazioni comparative.
+
+Nel campo "fonti" riporta solo ed esclusivamente URL presi da questo elenco (massimo 10). Non citare altre pagine anche se le conosci: se non compaiono in questo elenco non sono ammesse.${formattaFeedback(feedback)}`;
+}
+
+function createGeneratorAgent({ model, searchTool, logger }) {
+    async function generate(argomento, opts = {}) {
+        const { feedback = [], onFase } = opts;
+
+        onFase?.({ fase: "ricerca", messaggio: "Ricerca delle fonti ufficiali sul web..." });
+
+        let risultatiRicerca;
+        try {
+            const rawOutput = await searchTool.invoke({ query: argomento });
+            const parsedOutput = JSON.parse(rawOutput);
+            risultatiRicerca = parsedOutput.dati_grezzi ?? [];
+        } catch (error) {
+            // Problema transitorio (rete/quota Brave): l'orchestrator ritenta,
+            // la ricerca potrebbe andare a buon fine al tentativo successivo.
+            throw new AgentError(
+                `Ricerca di fonti ufficiali fallita per l'argomento "${argomento}"`,
+                ErrorCodes.GENERATION_ERROR,
+                error
+            );
+        }
+
+        // Nessuna fonte ufficiale trovata: ci fermiamo qui, PRIMA di spendere una
+        // chiamata al modello, per non sprecare token su un appunto che la policy
+        // "solo fonti ufficiali" scarterebbe comunque. Non è un problema
+        // transitorio (la stessa ricerca darebbe lo stesso risultato vuoto anche
+        // ritentando), quindi l'orchestrator non deve ritentare questo caso.
+        if (risultatiRicerca.length === 0) {
+            logger.warn("generatorAgent", "Nessuna fonte ufficiale trovata, generazione saltata", { argomento });
+            throw new AgentError(
+                `Nessuna fonte ufficiale trovata per l'argomento "${argomento}"`,
+                ErrorCodes.NO_OFFICIAL_SOURCE_ERROR
+            );
+        }
+
+        // Fonti trovate ma nessuna con testo estratto (pagina JS-rendered, timeout,
+        // non-HTML: vedi fetchPageText): a differenza del caso sopra, qui NON è
+        // detto che sia deterministico (un timeout di rete può non ripetersi), quindi
+        // resta un GENERATION_ERROR normale che l'orchestrator ritenta. Ci fermiamo
+        // comunque PRIMA di chiamare il modello, perché senza estratti scriverebbe
+        // l'appunto solo dalla propria memoria nonostante l'istruzione di restare
+        // generico: meglio ritentare (magari il fetch va a buon fine) che rischiare
+        // contenuto non verificato.
+        if (risultatiRicerca.every((r) => !r.contenuto)) {
+            logger.warn("generatorAgent", "Fonti trovate ma senza testo estratto, generazione saltata", { argomento });
+            throw new AgentError(
+                `Nessun contenuto estratto dalle fonti ufficiali trovate per l'argomento "${argomento}"`,
+                ErrorCodes.GENERATION_ERROR
+            );
+        }
+
+        const prompt = buildPrompt(argomento, risultatiRicerca, feedback);
+
+        onFase?.({ fase: "generazione", messaggio: "Generazione della bozza dell'appunto..." });
+
+        try {
+            const modelloStrutturato = model.withStructuredOutput(NoteDraftSchema);
+            const draft = await modelloStrutturato.invoke(prompt);
+            // risultatiRicerca (title/url/contenuto) viaggia insieme alla bozza, non
+            // solo i suoi URL: il Validatore la usa per controllare che ogni fonte
+            // citata sia una di quelle davvero trovate (isOfficialUrl controlla solo
+            // il dominio, non l'esistenza reale della pagina), l'Agente di aderenza
+            // la usa per confrontare i fatti scritti con il testo delle fonti.
+            return { draft, risultatiRicerca };
+        } catch (error) {
+            throw new AgentError(
+                `Generazione dell'appunto fallita per l'argomento "${argomento}"`,
+                ErrorCodes.GENERATION_ERROR,
+                error
+            );
+        }
+    }
+
+    return { generate };
+}
+
+export default createGeneratorAgent;
