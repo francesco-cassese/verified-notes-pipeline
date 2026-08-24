@@ -15,6 +15,8 @@ const EnvSchema = z.object({
     MODEL_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
     SEARCH_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
     PAGE_FETCH_TIMEOUT_MS: z.coerce.number().int().positive().default(8_000),
+    GENERATION_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(15 * 60_000),
+    GENERATION_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(5),
 });
 
 // Provo a validare process.env contro lo schema
@@ -41,6 +43,8 @@ const settings = {
     modelTimeoutMs: parsed.data.MODEL_TIMEOUT_MS,
     searchTimeoutMs: parsed.data.SEARCH_TIMEOUT_MS,
     pageFetchTimeoutMs: parsed.data.PAGE_FETCH_TIMEOUT_MS,
+    generationRateLimitWindowMs: parsed.data.GENERATION_RATE_LIMIT_WINDOW_MS,
+    generationRateLimitMax: parsed.data.GENERATION_RATE_LIMIT_MAX,
 };
 
 export default settings;
