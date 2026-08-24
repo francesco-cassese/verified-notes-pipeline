@@ -1,0 +1,22 @@
+{
+  "name": "backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node --env-file=.env src/server.js",
+    "watch": "node --watch --env-file=.env src/server.js",
+    "test": "node --env-file=.env --test"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@langchain/anthropic": "^1.5.1",
+    "cheerio": "^1.2.0",
+    "express": "^5.2.1",
+    "langchain": "^1.5.3",
+    "zod": "^4.4.3"
+  }
+}
