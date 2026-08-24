@@ -1,5 +1,7 @@
 # Verified Notes Pipeline
 
+[![CI](https://github.com/francesco-cassese/verified-notes-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/francesco-cassese/verified-notes-pipeline/actions/workflows/ci.yml)
+
 Una pipeline multi-agente che genera appunti tecnici di programmazione ancorati alla documentazione ufficiale — non alla memoria di un modello linguistico.
 
 Chiedile un argomento ("React useEffect hook", "PHP traits", "indici PostgreSQL") e lei cerca fonti ufficiali, scrive una bozza basata sul testo reale delle pagine trovate, e la fa passare attraverso quattro controlli indipendenti prima di salvarla su disco. Se un controllo fallisce, il motivo torna indietro per un nuovo tentativo. Niente arriva su disco finché ogni affermazione contenuta non è riconducibile a una fonte realmente recuperata.
@@ -44,8 +46,9 @@ L'avanzamento viene trasmesso al frontend via Server-Sent Events man mano che og
 ## Sicurezza
 
 - **Protezione da path traversal** — titoli e nomi di modulo vengono trasformati in slug tramite una whitelist rigida (solo `[a-z0-9-]`), e ogni percorso file risolto viene verificato per contenimento dentro la directory degli appunti prima di ogni lettura o scrittura.
-- **Protezione SSRF** — le pagine delle fonti recuperate sono limitate a una whitelist curata di domini di documentazione ufficiale, verificate contro una allowlist di IP pubblici tramite lookup DNS (bloccando range privati/loopback/link-local), e ricontrollate dopo eventuali redirect.
+- **Protezione SSRF senza finestra DNS-rebinding** — le pagine delle fonti recuperate sono limitate a una whitelist curata di domini ufficiali e ricontrollate dopo eventuali redirect. La validazione "l'IP non è privato" avviene nello stesso identico lookup DNS usato per aprire davvero la connessione (un `Agent` undici con `connect.lookup` custom), non in un controllo separato fatto prima: così un dominio con TTL bassissimo non può rispondere un IP pubblico al controllo e uno privato alla richiesta reale.
 - **Validazione di appartenenza delle fonti** — superare la whitelist di dominio non basta: il Validator verifica anche che l'URL citato sia esattamente uno di quelli restituiti dalla ricerca per quel tentativo, così un URL plausibile ma inventato su un dominio comunque ufficiale viene comunque respinto.
+- **Rate limiting sulla generazione** — `POST /api/appunti` è l'unico endpoint che costa (fino a `maxAttempts` chiamate LLM + ricerca in sequenza): è limitato per IP (default 5 richieste ogni 15 minuti, configurabile) per evitare che chiunque lo raggiunga possa consumare la quota Anthropic/Brave a piacere. Gli endpoint di lettura dell'archivio non hanno limiti, sono solo accessi al filesystem.
 
 ## Stack tecnologico
 
@@ -85,6 +88,7 @@ pnpm install
 # apps/backend/.env — copia da .env.example e compila:
 #   CLAUDE_API_KEY   chiave API Anthropic
 #   BRAVE_API_KEY    chiave API Brave Search
+# Il resto (timeout, tentativi, rate limit) è opzionale, con default sensati in utils/settings.js
 
 pnpm dev:backend   # API Express su :3000
 pnpm dev:frontend  # dev server Vite, proxy di /api verso :3000
@@ -108,6 +112,8 @@ pnpm --filter backend test
 ```
 
 Ogni agente e l'orchestratore sono costruiti come factory function che ricevono le proprie dipendenze come parametri (il client del modello, il tool di ricerca, un logger), così i test possono iniettare dei mock senza toccare la rete o le vere API di Anthropic/Brave.
+
+Una GitHub Actions workflow ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) esegue test, lint e build a ogni push e pull request su `main`.
 
 ## Nota sullo sviluppo
 
