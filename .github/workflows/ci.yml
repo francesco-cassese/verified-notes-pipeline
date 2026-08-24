@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # I test non chiamano mai le API reali (ogni agente riceve model/searchTool
+      # via dependency injection nei test), ma settings.js valida le env var
+      # richieste già al solo import: bastano valori fittizi non vuoti.
+      - name: Create dummy backend .env
+        run: |
+          echo "CLAUDE_API_KEY=ci-placeholder" >> apps/backend/.env
+          echo "BRAVE_API_KEY=ci-placeholder" >> apps/backend/.env
+
+      - name: Backend tests
+        run: pnpm --filter backend test
+
+      - name: Frontend lint
+        run: pnpm --filter frontend lint
+
+      - name: Frontend build
+        run: pnpm build
