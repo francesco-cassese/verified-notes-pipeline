@@ -4,8 +4,23 @@ import crypto from "node:crypto";
 import { resolveSafeNotePath, slugify } from "../../utils/safePath.js";
 import { AgentError, ErrorCodes } from "../../utils/errors.js";
 
+// L'ordine conta: i backslash vanno escapati PRIMA delle virgolette, altrimenti
+// il backslash appena inserito per escapare una `"` verrebbe ri-escapato al
+// giro successivo. Senza questo, un titolo con un backslash letterale (es. un
+// appunto su espressioni regolari, "\d" o "\s") produce un valore YAML non
+// valido per un parser conforme allo standard: il lettore di questo progetto
+// (notesArchive.js) è tollerante perché usa una regex, non se ne accorgerebbe,
+// ma qualsiasi altro strumento YAML-aware fallirebbe ad aprire il file.
+// Anche newline/tab letterali dentro il valore romperebbero lo scalare
+// "tra virgolette" su una riga sola, quindi li converto nella sequenza di
+// escape corrispondente invece di lasciarli passare come caratteri di controllo.
 function escapeYaml(valore) {
-    return String(valore).replace(/"/g, '\\"');
+    return String(valore)
+        .replace(/\\/g, "\\\\")
+        .replace(/"/g, '\\"')
+        .replace(/\n/g, "\\n")
+        .replace(/\r/g, "\\r")
+        .replace(/\t/g, "\\t");
 }
 
 function escapeCellaTabella(valore) {

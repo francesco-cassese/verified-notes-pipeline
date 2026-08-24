@@ -54,6 +54,36 @@ test("writerAgent + notesArchive: un appunto scritto è poi elencabile e leggibi
     }
 });
 
+test("writerAgent: un titolo con backslash e newline produce un frontmatter YAML valido", async () => {
+    const notesDir = await creaNotesDirTemporanea();
+    try {
+        const archivista = { selezionaCartella: () => "regex" };
+        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivista });
+
+        // "\d" letterale (comune in un appunto su regex) e una newline reale nel
+        // titolo: senza escaping corretto il backslash lascia le virgolette non
+        // bilanciate, e la newline spezza lo scalare YAML su più righe.
+        const titoloProblematico = 'Pattern "\\d" su più righe\ntitolo';
+        const scritta = await writer.write(notaValida({ titolo: titoloProblematico }));
+
+        const contenuto = await fs.readFile(scritta.percorso, "utf-8");
+        const righeTitolo = contenuto.split("\n").filter((riga) => riga.startsWith("titolo:"));
+
+        assert.equal(righeTitolo.length, 1, "il valore deve restare su una sola riga");
+        // Stringa tra virgolette con escape bilanciati: ogni backslash deve
+        // essere seguito da un carattere che chiude una coppia di escape,
+        // altrimenti una `"` interna verrebbe letta come chiusura anticipata
+        // (o un backslash finale "mangerebbe" la virgoletta di chiusura vera).
+        assert.match(righeTitolo[0], /^titolo: "(?:[^"\\]|\\.)*"$/);
+
+        // Il sidecar JSON (mai passato per l'escaping YAML) resta fedele all'originale.
+        const letto = await leggiAppunto(notesDir, "regex", scritta.nomeFile);
+        assert.equal(letto.nota.titolo, titoloProblematico);
+    } finally {
+        await fs.rm(notesDir, { recursive: true, force: true });
+    }
+});
+
 test("writerAgent: un titolo con tentativo di path traversal produce comunque un file contenuto nella notesDir", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
