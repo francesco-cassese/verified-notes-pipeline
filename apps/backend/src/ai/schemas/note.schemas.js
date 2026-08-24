@@ -39,7 +39,11 @@ const GlossarioVoceSchema = z.object({
 // restino facili da ritrovare invece di essere sparsi dentro il contenuto.
 const ErroreComuneSchema = z.object({
     errore: z.string().min(1).max(200),
-    soluzione: z.string().min(1).max(300),
+    // 500 e non 300: il modello scrive spesso soluzioni pratiche con un
+    // controesempio (es. "usa X invece di Y"), e 300 caratteri si sono
+    // rivelati troppo stretti nella pratica, causando un OutputParserException
+    // non recuperabile a metà della generazione (vedi generatorAgent.js).
+    soluzione: z.string().min(1).max(500),
 });
 
 const NoteDraftSchema = z.object({

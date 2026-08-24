@@ -74,6 +74,40 @@ test("generate: errore del modello viene incapsulato in GENERATION_ERROR con cau
 
     await assert.rejects(
         () => generator.generate("argomento a caso"),
-        (err) => err.code === ErrorCodes.GENERATION_ERROR && err.cause === erroreOriginale
+        (err) => err.code === ErrorCodes.GENERATION_ERROR && err.cause === erroreOriginale && err.issues === null
+    );
+});
+
+test("generate: OutputParserException (bozza fuori schema) espone issues leggibili per il retry successivo", async () => {
+    const erroreParsing = new Error(
+        'Failed to parse. Text: "{...}". Error: [{"code":"too_big","maximum":300,"path":["erroriComuni",1,"soluzione"],"message":"Too big: expected string to have <=300 characters"}]\n\nTroubleshooting URL: https://docs.langchain.com/oss/javascript/langchain/errors/OUTPUT_PARSING_FAILURE/'
+    );
+    erroreParsing.name = "OutputParserException";
+    const model = { withStructuredOutput: () => ({ invoke: async () => { throw erroreParsing; } }) };
+    const datiGrezzi = [{ title: "React Docs", url: "https://react.dev/learn", contenuto: "testo" }];
+    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(datiGrezzi), logger: loggerSilenzioso });
+
+    await assert.rejects(
+        () => generator.generate("argomento a caso"),
+        (err) => {
+            assert.equal(err.code, ErrorCodes.GENERATION_ERROR);
+            assert.deepEqual(err.issues, [
+                'Il campo "erroriComuni.1.soluzione" non rispetta lo schema: Too big: expected string to have <=300 characters',
+            ]);
+            return true;
+        }
+    );
+});
+
+test("generate: errore di parsing con formato inatteso -> issues null, nessun feedback fasullo", async () => {
+    const erroreParsing = new Error('Failed to parse. Text: "{...}". Error: qualcosa di non-JSON');
+    erroreParsing.name = "OutputParserException";
+    const model = { withStructuredOutput: () => ({ invoke: async () => { throw erroreParsing; } }) };
+    const datiGrezzi = [{ title: "React Docs", url: "https://react.dev/learn", contenuto: "testo" }];
+    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(datiGrezzi), logger: loggerSilenzioso });
+
+    await assert.rejects(
+        () => generator.generate("argomento a caso"),
+        (err) => err.code === ErrorCodes.GENERATION_ERROR && err.issues === null
     );
 });

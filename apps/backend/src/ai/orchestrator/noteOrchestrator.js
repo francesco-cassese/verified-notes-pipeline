@@ -44,6 +44,14 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
                     return { status: "failed", reason: "no_official_source", attempts: attempt };
                 }
 
+                // Se la bozza ha violato lo schema (es. un campo troppo lungo), il
+                // parser lancia prima ancora che il codice la veda: senza questo
+                // feedback specifico il tentativo successivo ripeterebbe alla cieca
+                // lo stesso errore, invece di sapere cosa correggere.
+                if (error.issues) {
+                    lastIssues = error.issues;
+                }
+
                 logger.error("orchestrator", "Generazione fallita", {
                     argomento,
                     attempt,

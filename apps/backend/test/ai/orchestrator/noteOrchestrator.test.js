@@ -137,6 +137,35 @@ test("run: la generazione fallisce sempre -> esaurisce tutti i tentativi", async
     assert.equal(chiamate, 3);
 });
 
+test("run: la bozza viola lo schema (OutputParserException) -> gli issues arrivano come feedback al tentativo successivo", async () => {
+    const chiamateGenerate = [];
+    let tentativo = 0;
+    const generator = {
+        generate: async (argomento, opts) => {
+            tentativo += 1;
+            chiamateGenerate.push(opts.feedback);
+            if (tentativo === 1) {
+                const errore = new AgentError("bozza fuori schema", ErrorCodes.GENERATION_ERROR);
+                errore.issues = ['Il campo "erroriComuni.1.soluzione" non rispetta lo schema: troppo lungo'];
+                throw errore;
+            }
+            return { draft: { titolo: "bozza-2" }, risultatiRicerca: [] };
+        },
+    };
+    const validator = { validate: (draft) => ({ success: true, data: draft }) };
+    const writer = { write: async (data) => data };
+
+    const orchestrator = createNoteOrchestrator({
+        generator, validator, reviewer: reviewerApprova, writer,
+        logger: loggerSilenzioso, maxAttempts: 3,
+    });
+    const risultato = await orchestrator.run("argomento");
+
+    assert.equal(risultato.status, "success");
+    assert.deepEqual(chiamateGenerate[0], []);
+    assert.deepEqual(chiamateGenerate[1], ['Il campo "erroriComuni.1.soluzione" non rispetta lo schema: troppo lungo']);
+});
+
 test("run: perimetro mai approvato -> esaurisce i tentativi con motivo 'validation'", async () => {
     const generator = { generate: async () => ({ draft: { titolo: "x" }, risultatiRicerca: [] }) };
     const validator = { validate: (draft) => ({ success: true, data: draft }) };

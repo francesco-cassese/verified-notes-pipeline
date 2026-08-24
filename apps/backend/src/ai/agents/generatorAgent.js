@@ -16,6 +16,35 @@ function formattaFeedback(feedback) {
     return `\n\nIl tentativo precedente non ha superato la validazione per questi motivi, correggili:\n${elenco}`;
 }
 
+// Quando la bozza generata viola lo schema (es. un campo troppo lungo),
+// withStructuredOutput lancia un OutputParserException PRIMA che il codice
+// veda mai la bozza: senza questa estrazione l'orchestrator ritenterebbe alla
+// cieca, senza sapere cosa è andato storto, e il modello tenderebbe a
+// ripetere lo stesso identico errore su ogni tentativo (visto succedere in
+// pratica: 3 tentativi falliti tutti per lo stesso campo troppo lungo).
+// Il messaggio non espone un campo strutturato con gli issues di Zod, solo
+// una stringa che li incorpora via JSON.stringify: l'estrazione è quindi
+// best-effort, con fallback a nessun feedback specifico se il formato cambia.
+function estraiIssuesDaOutputParserException(error) {
+    if (error?.name !== "OutputParserException" || typeof error.message !== "string") return null;
+
+    const senzaTroubleshooting = error.message.split("\n\nTroubleshooting URL:")[0];
+    const match = /Error: (\[[\s\S]*\])$/.exec(senzaTroubleshooting);
+    if (!match) return null;
+
+    try {
+        const issues = JSON.parse(match[1]);
+        if (!Array.isArray(issues) || issues.length === 0) return null;
+
+        return issues.map((issue) => {
+            const percorso = Array.isArray(issue.path) && issue.path.length > 0 ? issue.path.join(".") : null;
+            return percorso ? `Il campo "${percorso}" non rispetta lo schema: ${issue.message}` : issue.message;
+        });
+    } catch {
+        return null;
+    }
+}
+
 // A questo punto risultatiRicerca è sempre non vuoto: se non ci sono fonti
 // ufficiali, generate() interrompe prima di arrivare qui (vedi sotto).
 // Il vincolo "solo ufficiali" viene comunque istruito esplicitamente qui e
@@ -125,11 +154,13 @@ function createGeneratorAgent({ model, searchTool, logger }) {
             // la usa per confrontare i fatti scritti con il testo delle fonti.
             return { draft, risultatiRicerca };
         } catch (error) {
-            throw new AgentError(
+            const agentError = new AgentError(
                 `Generazione dell'appunto fallita per l'argomento "${argomento}"`,
                 ErrorCodes.GENERATION_ERROR,
                 error
             );
+            agentError.issues = estraiIssuesDaOutputParserException(error);
+            throw agentError;
         }
     }
 
