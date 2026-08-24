@@ -108,3 +108,7 @@ pnpm --filter backend test
 ```
 
 Ogni agente e l'orchestratore sono costruiti come factory function che ricevono le proprie dipendenze come parametri (il client del modello, il tool di ricerca, un logger), così i test possono iniettare dei mock senza toccare la rete o le vere API di Anthropic/Brave.
+
+## Nota sullo sviluppo
+
+Ho progettato l'architettura di questa pipeline — quanti agenti servono, cosa deve girare in sequenza, cosa deve essere deterministico e cosa no — e l'ho implementata con l'aiuto di Claude (Anthropic) come assistente di codice. È stato anche un modo per esplorare i limiti del vibecoding: fin dove si può spingere lo sviluppo affiancato da un'AI quando le decisioni di design restano in mano a chi guida il progetto.
