@@ -4,7 +4,7 @@
 
 Una pipeline multi-agente che genera appunti tecnici di programmazione ancorati alla documentazione ufficiale — non alla memoria di un modello linguistico.
 
-Chiedile un argomento ("React useEffect hook", "PHP traits", "indici PostgreSQL") e lei cerca fonti ufficiali, scrive una bozza basata sul testo reale delle pagine trovate, e la fa passare attraverso quattro controlli indipendenti prima di salvarla su disco. Se un controllo fallisce, il motivo torna indietro per un nuovo tentativo. Niente arriva su disco finché ogni affermazione contenuta non è riconducibile a una fonte realmente recuperata.
+Chiedile un argomento ("React useEffect hook", "PHP traits", "indici PostgreSQL") e lei cerca fonti ufficiali, scrive una bozza basata sul testo reale delle pagine trovate, e la fa passare attraverso controlli indipendenti prima di salvarla su disco. Se un controllo fallisce, il motivo torna indietro per un nuovo tentativo. Niente arriva su disco finché ogni affermazione contenuta non è riconducibile a una fonte realmente recuperata.
 
 ## Perché
 
@@ -19,27 +19,26 @@ flowchart LR
     U[Argomento] --> G[Generator]
     G --> V{Validator}
     V -- fallisce --> G
-    V -- passa --> R{Revisore}
+    V -- passa --> R{Reviewer}
     R -- fallisce --> G
-    R -- passa --> A{Aderenza}
-    A -- fallisce --> G
-    A -- passa --> AR[Archivista]
+    R -- passa --> AR[Archivist]
     AR --> W[Writer]
     W --> D[(Disco: .md + .json)]
 ```
 
-Sei agenti specializzati, ognuno con un solo compito, coordinati da un orchestratore che ritenta solo i passaggi non deterministici:
+Cinque agenti specializzati, ognuno con un solo compito, coordinati da un orchestratore che ritenta solo i passaggi non deterministici:
 
 | Agente | Tipo | Responsabilità |
 |---|---|---|
-| **Generator** | LLM | Cerca l'argomento solo su domini di documentazione ufficiale, recupera il testo reale delle pagine trovate e scrive la bozza basandosi su quegli estratti — mai sulla conoscenza pregressa del modello. |
+| **Generator** | LLM | Cerca l'argomento solo su domini di documentazione ufficiale, recupera il testo reale delle pagine trovate e scrive la bozza basandosi su quegli estratti — mai sulla conoscenza pregressa del modello. Riusa le fonti già trovate nei tentativi successivi della stessa generazione invece di ripetere la ricerca, quando il retry è dovuto a un rifiuto di Validator o Reviewer e non a un problema della ricerca stessa. |
 | **Validator** | deterministico | Controlla la bozza contro uno schema rigido e verifica che ogni fonte citata sia esattamente uno degli URL restituiti dalla ricerca — non solo un dominio plausibile. Nessuna chiamata LLM, quindi è economico rieseguirlo a ogni tentativo. |
-| **Revisore** | LLM | Verifica che il contenuto resti in tema e al livello di approfondimento corretto per l'argomento richiesto, senza divagazioni su materiale avanzato non richiesto. |
-| **Aderenza** | LLM | Il filtro più severo: confronta ogni fatto, esempio e frammento di codice della bozza con gli estratti delle fonti recuperate, scartando contenuto plausibile ma scritto a memoria. |
-| **Archivista** | deterministico | Mappa il modulo/tecnologia della nota su una cartella canonica tramite una tabella fissa, invece di usare alla lettera la dicitura dedotta dal modello — evita cartelle quasi-duplicate come `react/` vs `reactjs/`. |
+| **Reviewer** | LLM | In un'unica chiamata valuta due aspetti indipendenti della bozza, ciascuno con un proprio verdetto: **perimetro/livello** (il contenuto resta in tema e al livello di approfondimento corretto, senza divagazioni su materiale avanzato non richiesto) e **aderenza alle fonti** (il filtro più severo: ogni fatto, esempio e frammento di codice trova riscontro negli estratti recuperati, scartando contenuto plausibile ma scritto a memoria). Unire i due controlli in una sola chiamata dimezza i token di contesto rispetto a due chiamate separate, senza ridurre il rigore di nessuno dei due giudizi. |
+| **Archivist** | deterministico | Mappa il modulo/tecnologia della nota su una cartella canonica tramite una tabella fissa, invece di usare alla lettera la dicitura dedotta dal modello — evita cartelle quasi-duplicate come `react/` vs `reactjs/`. |
 | **Writer** | deterministico | Formatta la bozza approvata secondo un template Markdown fisso (frontmatter, indice, sezioni, tabella errori comuni, fonti, key takeaways, glossario opzionale) e la scrive su disco insieme a un sidecar JSON con gli stessi dati strutturati. |
 
 L'**orchestratore** tiene insieme tutto: se un controllo fallisce, il motivo specifico torna in un nuovo tentativo di generazione (massimo 3), invece di far ripartire l'intera pipeline alla cieca. Non tutto è però retryabile: se non esiste alcuna fonte ufficiale per l'argomento, o se il salvataggio finale su disco fallisce, la pipeline si ferma subito invece di continuare a consumare chiamate al modello su un problema che ritentare non risolverebbe.
+
+Nel caso migliore una generazione richiede quindi 1 ricerca web + 2 chiamate LLM (Generator, Reviewer); nel caso peggiore (3 tentativi, sempre respinta) al massimo 1 ricerca + 6 chiamate LLM, non 9: la ricerca gira una sola volta per argomento e Reviewer sostituisce due chiamate separate con una.
 
 L'avanzamento viene trasmesso al frontend via Server-Sent Events man mano che ogni fase viene eseguita, dato che una generazione completa può richiedere diverse chiamate LLM in sequenza.
 
@@ -62,7 +61,7 @@ apps/
   backend/
     src/
       ai/
-        agents/        # i sei agenti
+        agents/        # i cinque agenti
         orchestrator/   # retry loop + composizione delle dipendenze
         schemas/        # schemi Zod per un appunto generato
         tools/           # tool di ricerca Brave
