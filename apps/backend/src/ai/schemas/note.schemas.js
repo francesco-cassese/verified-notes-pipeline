@@ -65,21 +65,28 @@ const NoteDraftSchema = z.object({
 
 const NoteSchema = NoteDraftSchema;
 
-// Verdetto del Revisore (Agente 3.5): controllo semantico di perimetro
-// (fuori tema) e gap analysis, distinto dalla conformità strutturale già
-// verificata da NoteSchema. "motivi" è vuoto/non significativo se approvato.
-const RevisioneSchema = z.object({
-    approvato: z.boolean(),
-    motivi: z.array(z.string().min(1).max(500)).max(5),
-});
-
-// Verdetto dell'Agente di aderenza: controlla che i fatti scritti nella bozza
-// trovino riscontro negli estratti delle fonti recuperate, distinto sia dalla
-// conformità strutturale (NoteSchema) sia dal controllo di perimetro/livello
-// (RevisioneSchema). "motivi" è vuoto/non significativo se aderente.
-const AderenzaSchema = z.object({
-    aderente: z.boolean(),
-    motivi: z.array(z.string().min(1).max(500)).max(5),
+// Verdetto del Reviewer (Agente 3.5): un'unica chiamata LLM che valuta due
+// aspetti indipendenti della bozza, distinti dalla conformità strutturale
+// già verificata da NoteSchema:
+// - "perimetro": la bozza resta in tema e al livello giusto (fuori tema/gap/
+//   troppo avanzato);
+// - "aderenza": i fatti scritti trovano riscontro negli estratti delle fonti
+//   recuperate invece che nella memoria del modello.
+// Erano due chiamate separate perché sono due giudizi concettualmente
+// distinti, ma valutano la stessa bozza+fonti: unirle in una sola chiamata
+// dimezza i token di contesto (niente più bozza e fonti duplicate in due
+// prompt) senza annacquare nessuno dei due controlli, che restano verdetti
+// indipendenti con i propri motivi. "motivi" è vuoto/non significativo se il
+// relativo verdetto è positivo.
+const ReviewSchema = z.object({
+    perimetro: z.object({
+        approvato: z.boolean(),
+        motivi: z.array(z.string().min(1).max(500)).max(5),
+    }),
+    aderenza: z.object({
+        aderente: z.boolean(),
+        motivi: z.array(z.string().min(1).max(500)).max(5),
+    }),
 });
 
 const WrittenNoteSchema = NoteSchema.extend({
@@ -97,6 +104,5 @@ export {
     NoteDraftSchema,
     NoteSchema,
     WrittenNoteSchema,
-    RevisioneSchema,
-    AderenzaSchema,
+    ReviewSchema,
 };

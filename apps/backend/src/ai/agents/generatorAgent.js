@@ -51,52 +51,64 @@ Nel campo "fonti" riporta solo ed esclusivamente URL presi da questo elenco (mas
 
 function createGeneratorAgent({ model, searchTool, logger }) {
     async function generate(argomento, opts = {}) {
-        const { feedback = [], onFase } = opts;
-
-        onFase?.({ fase: "ricerca", messaggio: "Ricerca delle fonti ufficiali sul web..." });
+        const { feedback = [], onFase, risultatiRicercaCache } = opts;
 
         let risultatiRicerca;
-        try {
-            const rawOutput = await searchTool.invoke({ query: argomento });
-            const parsedOutput = JSON.parse(rawOutput);
-            risultatiRicerca = parsedOutput.dati_grezzi ?? [];
-        } catch (error) {
-            // Problema transitorio (rete/quota Brave): l'orchestrator ritenta,
-            // la ricerca potrebbe andare a buon fine al tentativo successivo.
-            throw new AgentError(
-                `Ricerca di fonti ufficiali fallita per l'argomento "${argomento}"`,
-                ErrorCodes.GENERATION_ERROR,
-                error
-            );
-        }
 
-        // Nessuna fonte ufficiale trovata: ci fermiamo qui, PRIMA di spendere una
-        // chiamata al modello, per non sprecare token su un appunto che la policy
-        // "solo fonti ufficiali" scarterebbe comunque. Non è un problema
-        // transitorio (la stessa ricerca darebbe lo stesso risultato vuoto anche
-        // ritentando), quindi l'orchestrator non deve ritentare questo caso.
-        if (risultatiRicerca.length === 0) {
-            logger.warn("generatorAgent", "Nessuna fonte ufficiale trovata, generazione saltata", { argomento });
-            throw new AgentError(
-                `Nessuna fonte ufficiale trovata per l'argomento "${argomento}"`,
-                ErrorCodes.NO_OFFICIAL_SOURCE_ERROR
-            );
-        }
+        // Se un tentativo precedente in questa stessa run ha già trovato fonti
+        // (il retry è scattato per un rifiuto del validator/controllo qualità,
+        // non per un fallimento della ricerca), le riusiamo: l'argomento non è
+        // cambiato, quindi la ricerca darebbe con ogni probabilità lo stesso
+        // risultato. Risparmia la chiamata a Brave e il fetch delle pagine ad
+        // ogni retry, senza intaccare nessuna delle verifiche a valle (usano le
+        // stesse fonti di prima, solo verificate su una bozza nuova).
+        if (risultatiRicercaCache) {
+            risultatiRicerca = risultatiRicercaCache;
+        } else {
+            onFase?.({ fase: "ricerca", messaggio: "Ricerca delle fonti ufficiali sul web..." });
 
-        // Fonti trovate ma nessuna con testo estratto (pagina JS-rendered, timeout,
-        // non-HTML: vedi fetchPageText): a differenza del caso sopra, qui NON è
-        // detto che sia deterministico (un timeout di rete può non ripetersi), quindi
-        // resta un GENERATION_ERROR normale che l'orchestrator ritenta. Ci fermiamo
-        // comunque PRIMA di chiamare il modello, perché senza estratti scriverebbe
-        // l'appunto solo dalla propria memoria nonostante l'istruzione di restare
-        // generico: meglio ritentare (magari il fetch va a buon fine) che rischiare
-        // contenuto non verificato.
-        if (risultatiRicerca.every((r) => !r.contenuto)) {
-            logger.warn("generatorAgent", "Fonti trovate ma senza testo estratto, generazione saltata", { argomento });
-            throw new AgentError(
-                `Nessun contenuto estratto dalle fonti ufficiali trovate per l'argomento "${argomento}"`,
-                ErrorCodes.GENERATION_ERROR
-            );
+            try {
+                const rawOutput = await searchTool.invoke({ query: argomento });
+                const parsedOutput = JSON.parse(rawOutput);
+                risultatiRicerca = parsedOutput.dati_grezzi ?? [];
+            } catch (error) {
+                // Problema transitorio (rete/quota Brave): l'orchestrator ritenta,
+                // la ricerca potrebbe andare a buon fine al tentativo successivo.
+                throw new AgentError(
+                    `Ricerca di fonti ufficiali fallita per l'argomento "${argomento}"`,
+                    ErrorCodes.GENERATION_ERROR,
+                    error
+                );
+            }
+
+            // Nessuna fonte ufficiale trovata: ci fermiamo qui, PRIMA di spendere una
+            // chiamata al modello, per non sprecare token su un appunto che la policy
+            // "solo fonti ufficiali" scarterebbe comunque. Non è un problema
+            // transitorio (la stessa ricerca darebbe lo stesso risultato vuoto anche
+            // ritentando), quindi l'orchestrator non deve ritentare questo caso.
+            if (risultatiRicerca.length === 0) {
+                logger.warn("generatorAgent", "Nessuna fonte ufficiale trovata, generazione saltata", { argomento });
+                throw new AgentError(
+                    `Nessuna fonte ufficiale trovata per l'argomento "${argomento}"`,
+                    ErrorCodes.NO_OFFICIAL_SOURCE_ERROR
+                );
+            }
+
+            // Fonti trovate ma nessuna con testo estratto (pagina JS-rendered, timeout,
+            // non-HTML: vedi fetchPageText): a differenza del caso sopra, qui NON è
+            // detto che sia deterministico (un timeout di rete può non ripetersi), quindi
+            // resta un GENERATION_ERROR normale che l'orchestrator ritenta. Ci fermiamo
+            // comunque PRIMA di chiamare il modello, perché senza estratti scriverebbe
+            // l'appunto solo dalla propria memoria nonostante l'istruzione di restare
+            // generico: meglio ritentare (magari il fetch va a buon fine) che rischiare
+            // contenuto non verificato.
+            if (risultatiRicerca.every((r) => !r.contenuto)) {
+                logger.warn("generatorAgent", "Fonti trovate ma senza testo estratto, generazione saltata", { argomento });
+                throw new AgentError(
+                    `Nessun contenuto estratto dalle fonti ufficiali trovate per l'argomento "${argomento}"`,
+                    ErrorCodes.GENERATION_ERROR
+                );
+            }
         }
 
         const prompt = buildPrompt(argomento, risultatiRicerca, feedback);

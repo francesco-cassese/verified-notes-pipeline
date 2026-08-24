@@ -51,6 +51,21 @@ test("generate: almeno una fonte con testo -> chiama il modello e restituisce dr
     assert.deepEqual(risultato.risultatiRicerca, datiGrezzi);
 });
 
+test("generate: con risultatiRicercaCache non chiama il tool di ricerca e riusa le fonti passate", async () => {
+    let searchToolChiamato = false;
+    const searchTool = { invoke: async () => { searchToolChiamato = true; return JSON.stringify({ dati_grezzi: [] }); } };
+    const draftFinto = { titolo: "Fake" };
+    const model = { withStructuredOutput: () => ({ invoke: async () => draftFinto }) };
+    const cache = [{ title: "React Docs", url: "https://react.dev/learn", contenuto: "testo estratto" }];
+    const generator = createGeneratorAgent({ model, searchTool, logger: loggerSilenzioso });
+
+    const risultato = await generator.generate("argomento a caso", { risultatiRicercaCache: cache });
+
+    assert.equal(searchToolChiamato, false);
+    assert.equal(risultato.draft, draftFinto);
+    assert.deepEqual(risultato.risultatiRicerca, cache);
+});
+
 test("generate: errore del modello viene incapsulato in GENERATION_ERROR con causa", async () => {
     const erroreOriginale = new Error("modello non disponibile");
     const model = { withStructuredOutput: () => ({ invoke: async () => { throw erroreOriginale; } }) };

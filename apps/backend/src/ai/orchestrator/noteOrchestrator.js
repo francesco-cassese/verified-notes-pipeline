@@ -1,9 +1,16 @@
 import { ErrorCodes } from "../../utils/errors.js";
 
-function createNoteOrchestrator({ generator, validator, revisore, aderenza, writer, logger, maxAttempts }) {
+function createNoteOrchestrator({ generator, validator, reviewer, writer, logger, maxAttempts }) {
     async function run(argomento, opts = {}) {
         const { onFase } = opts;
         let lastIssues = [];
+        // Le fonti trovate dipendono solo dall'argomento, non dal contenuto della
+        // bozza: se un retry è scattato per un rifiuto di validator/reviewer
+        // (non per un fallimento della ricerca stessa), le fonti del tentativo
+        // precedente sono ancora valide. Le teniamo in cache per evitare di rifare
+        // ricerca web + fetch delle pagine ad ogni retry, che non cambierebbe nulla
+        // nel risultato ma costerebbe tempo e chiamate all'API di ricerca.
+        let risultatiRicercaCache = null;
 
         // Solo il ciclo generate -> validate viene ripetuto: è l'unico passaggio
         // realmente non deterministico. La scrittura su disco resta fuori dal
@@ -19,7 +26,12 @@ function createNoteOrchestrator({ generator, validator, revisore, aderenza, writ
             let draft;
             let risultatiRicerca;
             try {
-                ({ draft, risultatiRicerca } = await generator.generate(argomento, { feedback: lastIssues, onFase: emettiFase }));
+                ({ draft, risultatiRicerca } = await generator.generate(argomento, {
+                    feedback: lastIssues,
+                    onFase: emettiFase,
+                    risultatiRicercaCache,
+                }));
+                risultatiRicercaCache = risultatiRicerca;
             } catch (error) {
                 if (error.code === ErrorCodes.NO_OFFICIAL_SOURCE_ERROR) {
                     // Non retryabile: la ricerca per questo argomento è deterministica,
@@ -57,16 +69,21 @@ function createNoteOrchestrator({ generator, validator, revisore, aderenza, writ
                 continue;
             }
 
-            // Conformità strutturale OK: passa al controllo semantico (perimetro
-            // e gap analysis). È l'unico step che richiede una seconda chiamata
-            // LLM nel ciclo, quindi gira solo dopo che lo schema è già passato,
-            // non su ogni bozza.
-            emettiFase({ fase: "controllo-perimetro", messaggio: "Controllo del contenuto e del livello..." });
-            let revisione;
+            // Conformità strutturale OK: passa alla revisione semantica, che in
+            // un'unica chiamata LLM valuta sia il perimetro/livello (la bozza
+            // resta in tema e al livello giusto) sia l'aderenza alle fonti (i
+            // fatti scritti vengono dagli estratti, non dalla memoria del
+            // modello: il Validatore verifica solo che gli URL citati siano
+            // reali, non che il testo generato sia fedele al loro contenuto).
+            // I due giudizi restano indipendenti nello schema e nel prompt, solo
+            // la chiamata è unica: dimezza i token di contesto (bozza+fonti
+            // incollate una volta sola) rispetto a due chiamate separate.
+            emettiFase({ fase: "revisione", messaggio: "Controllo del contenuto, del livello e delle fonti..." });
+            let esitoRevisione;
             try {
-                revisione = await revisore.revisiona(argomento, result.data);
+                esitoRevisione = await reviewer.review(argomento, result.data, risultatiRicerca);
             } catch (error) {
-                logger.error("orchestrator", "Revisione semantica fallita", {
+                logger.error("orchestrator", "Revisione fallita", {
                     argomento,
                     attempt,
                     errore: error.message,
@@ -78,41 +95,12 @@ function createNoteOrchestrator({ generator, validator, revisore, aderenza, writ
                 continue;
             }
 
-            if (!revisione.approvato) {
-                lastIssues = revisione.motivi;
-                logger.warn("orchestrator", "Revisione semantica non approvata, ripeto con feedback", {
-                    argomento,
-                    attempt,
-                    motivi: lastIssues,
-                });
-                continue;
-            }
+            const problemiPerimetro = esitoRevisione.perimetro.approvato ? [] : esitoRevisione.perimetro.motivi;
+            const problemiAderenza = esitoRevisione.aderenza.aderente ? [] : esitoRevisione.aderenza.motivi;
 
-            // Ultimo controllo prima della scrittura: la bozza rispetta lo schema
-            // ed è in tema (Revisore), ma i fatti che contiene potrebbero comunque
-            // venire dalla memoria del modello invece che dagli estratti delle fonti
-            // (il Validatore verifica solo che gli URL citati siano reali, non che
-            // il testo generato sia fedele al loro contenuto).
-            emettiFase({ fase: "controllo-aderenza", messaggio: "Verifica di aderenza alle fonti..." });
-            let verificaAderenza;
-            try {
-                verificaAderenza = await aderenza.verifica(argomento, result.data, risultatiRicerca);
-            } catch (error) {
-                logger.error("orchestrator", "Verifica di aderenza alle fonti fallita", {
-                    argomento,
-                    attempt,
-                    errore: error.message,
-                    causa: error.cause?.message ?? error.cause,
-                });
-                if (attempt === maxAttempts) {
-                    return { status: "failed", reason: "generation", attempts: attempt };
-                }
-                continue;
-            }
-
-            if (!verificaAderenza.aderente) {
-                lastIssues = verificaAderenza.motivi;
-                logger.warn("orchestrator", "Bozza non aderente alle fonti, ripeto con feedback", {
+            if (problemiPerimetro.length > 0 || problemiAderenza.length > 0) {
+                lastIssues = [...problemiPerimetro, ...problemiAderenza];
+                logger.warn("orchestrator", "Revisione non superata, ripeto con feedback", {
                     argomento,
                     attempt,
                     motivi: lastIssues,

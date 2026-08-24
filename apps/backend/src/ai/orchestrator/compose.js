@@ -4,8 +4,7 @@ import searchTool from "../tools/searchTool.js";
 import logger from "../../utils/logger.js";
 import createGeneratorAgent from "../agents/generatorAgent.js";
 import createValidatorAgent from "../agents/validatorAgent.js";
-import createRevisoreAgent from "../agents/revisoreAgent.js";
-import createAderenzaAgent from "../agents/aderenzaAgent.js";
+import createReviewerAgent from "../agents/reviewerAgent.js";
 import createArchivistaAgent from "../agents/archivistaAgent.js";
 import createWriterAgent from "../agents/writerAgent.js";
 import createNoteOrchestrator from "./noteOrchestrator.js";
@@ -18,8 +17,7 @@ const archivista = createArchivistaAgent({ logger });
 const noteOrchestrator = createNoteOrchestrator({
     generator: createGeneratorAgent({ model, searchTool, logger }),
     validator: createValidatorAgent({ logger }),
-    revisore: createRevisoreAgent({ model, logger }),
-    aderenza: createAderenzaAgent({ model, logger }),
+    reviewer: createReviewerAgent({ model, logger }),
     writer: createWriterAgent({ notesDir: settings.notesDir, logger, archivista }),
     logger,
     maxAttempts: settings.maxGenerationAttempts,
