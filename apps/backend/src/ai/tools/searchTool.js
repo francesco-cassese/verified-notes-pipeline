@@ -1,8 +1,9 @@
 import { tool } from "langchain";
 import z from "zod";
 import * as cheerio from "cheerio";
-import dns from "node:dns/promises";
+import dns from "node:dns";
 import net from "node:net";
+import { Agent, fetch as undiciFetch } from "undici";
 import settings from "../../utils/settings.js";
 import { isOfficialUrl } from "../../utils/officialSources.js";
 
@@ -31,30 +32,55 @@ function isIndirizzoPrivato(ip) {
     return true; // formato non riconosciuto: per sicurezza, tratta come non pubblico
 }
 
-async function isHostPubblico(hostname) {
-    try {
-        const { address } = await dns.lookup(hostname);
-        return !isIndirizzoPrivato(address);
-    } catch {
-        return false;
-    }
+// Risolve l'hostname e valida l'IP nello stesso identico lookup che poi apre
+// davvero la connessione TCP (passato come `connect.lookup` all'Agent sotto),
+// invece di controllare l'IP con una chiamata dns separata e sperare che
+// `fetch` risolva allo stesso indirizzo. Con due lookup distinti un DNS
+// malevolo (TTL bassissimo, DNS rebinding) potrebbe restituire un IP pubblico
+// al controllo e uno privato alla connessione reale: qui non c'è finestra fra
+// "controllato" e "usato", sono la stessa chiamata.
+function lookupPubblicoSolo(hostname, options, callback) {
+    dns.lookup(hostname, options, (err, address, family) => {
+        if (err) return callback(err);
+
+        // undici chiama questo lookup con { all: true }: `address` è quindi un
+        // array di { address, family }, non una singola stringa. Blocco se manca
+        // del tutto una risposta o se anche solo uno degli indirizzi risolti è
+        // privato, invece di controllare solo il primo.
+        const risolti = Array.isArray(address) ? address : [{ address, family }];
+        if (risolti.length === 0 || risolti.some((r) => isIndirizzoPrivato(r.address))) {
+            return callback(new Error(`Indirizzo non pubblico bloccato per ${hostname}`));
+        }
+        callback(null, address, family);
+    });
 }
+
+// Dispatcher condiviso: ogni richiesta fatta attraverso questo Agent risolve
+// l'host con lookupPubblicoSolo, quindi non può mai stabilire una connessione
+// verso un IP privato, indipendentemente dal dominio (anche se in whitelist).
+// Va abbinato a undiciFetch (sotto), non al fetch globale: mescolare un Agent
+// creato dal pacchetto undici con l'implementazione di fetch interna di Node
+// (versione diversa di undici) fa fallire la richiesta con un errore interno
+// oscuro ("invalid onRequestStart method").
+const agentSoloPubblico = new Agent({
+    connect: { lookup: lookupPubblicoSolo },
+});
 
 // Recupera il testo effettivo di una pagina ufficiale, non solo titolo/URL dei
 // risultati di ricerca: senza questo, l'LLM cita un link legittimo ma scrive il
 // contenuto a memoria (rischio di informazioni datate o inventate). Se il fetch
-// o l'estrazione falliscono (pagina JS-rendered, timeout, non-HTML, ...) torno
-// null: quella fonte resta comunque citabile come link, solo senza testo a supporto.
+// o l'estrazione falliscono (pagina JS-rendered, timeout, non-HTML, IP privato
+// bloccato dal dispatcher, ...) torno null: quella fonte resta comunque
+// citabile come link, solo senza testo a supporto.
 async function fetchPageText(url) {
-    if (!(await isHostPubblico(new URL(url).hostname))) return null;
-
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), settings.pageFetchTimeoutMs);
 
     try {
-        const response = await fetch(url, {
+        const response = await undiciFetch(url, {
             headers: { Accept: "text/html" },
             signal: controller.signal,
+            dispatcher: agentSoloPubblico,
         });
 
         if (!response.ok) return null;
