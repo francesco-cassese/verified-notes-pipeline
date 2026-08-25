@@ -117,15 +117,38 @@ async function leggiAppunto(baseDir, cartella, nomeFile) {
     }
 }
 
+// Parole di collegamento (italiano/inglese, i due idiomi in cui un argomento
+// viene tipicamente digitato) ignorate nel confronto tra argomenti: senza
+// questo filtro "foreach in PHP" e "PHP foreach" risultano argomenti diversi
+// solo per l'ordine delle parole e una preposizione, mentre sono chiaramente
+// la stessa richiesta.
+const PAROLE_IGNORATE = new Set([
+    "il", "lo", "la", "i", "gli", "le", "un", "uno", "una",
+    "di", "del", "dello", "della", "dei", "degli", "delle",
+    "a", "al", "allo", "alla", "ai", "agli", "alle",
+    "in", "con", "su", "per", "tra", "fra", "e", "ed", "o",
+    "the", "an", "of", "on", "for", "to", "and",
+]);
+
+// Riduce un argomento a un insieme ordinato di parole significative
+// (minuscolo, senza punteggiatura, senza duplicati, senza parole di
+// collegamento): due argomenti con le stesse parole chiave ma ordine o
+// preposizioni diversi producono la stessa chiave, quindi risultano uguali.
+function chiaveArgomento(testo) {
+    const parole = (testo.toLowerCase().match(/[a-z0-9]+/g) ?? [])
+        .filter((parola) => !PAROLE_IGNORATE.has(parola));
+    return [...new Set(parole)].sort().join(" ");
+}
+
 // Cerca tra tutti gli appunti già salvati uno con lo stesso argomento
-// (confronto case-insensitive sul campo "argomento", non sul titolo scelto
+// (confronto per parole chiave sul campo "argomento", non sul titolo scelto
 // dal modello, che può differire dalla richiesta originale): permette al
 // controller di rifiutare una generazione duplicata prima di avviare la
 // pipeline (ricerca + più chiamate LLM, tutte a pagamento) invece di scoprire
 // il doppione solo a fine generazione. Stessa strategia json-poi-frontmatter
 // di listAppunti/leggiAppunto sopra.
 async function trovaAppuntoPerArgomento(baseDir, argomento) {
-    const normalizzato = argomento.trim().toLowerCase();
+    const chiaveCercata = chiaveArgomento(argomento);
     const cartelle = await listCartelle(baseDir);
 
     for (const { cartella } of cartelle) {
@@ -146,7 +169,7 @@ async function trovaAppuntoPerArgomento(baseDir, argomento) {
                 ({ argomento: argomentoSalvato, titolo } = estraiFrontmatter(contenuto).meta);
             }
 
-            if (argomentoSalvato?.trim().toLowerCase() === normalizzato) {
+            if (argomentoSalvato && chiaveArgomento(argomentoSalvato) === chiaveCercata) {
                 return { cartella, nomeFile, titolo };
             }
         }

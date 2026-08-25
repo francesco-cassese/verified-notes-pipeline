@@ -33,6 +33,32 @@ test("trovaAppuntoPerArgomento: trova un appunto esistente con lo stesso argomen
     }
 });
 
+test("trovaAppuntoPerArgomento: trova un appunto con parole riordinate e preposizioni diverse", async () => {
+    const notesDir = await creaNotesDirTemporanea();
+    try {
+        await scriviAppuntoFinto(notesDir, "php", "foreach", { argomento: "PHP foreach", titolo: "Iterazione con foreach" });
+
+        const trovato = await trovaAppuntoPerArgomento(notesDir, "foreach in PHP");
+
+        assert.deepEqual(trovato, { cartella: "php", nomeFile: "foreach.md", titolo: "Iterazione con foreach" });
+    } finally {
+        await fs.rm(notesDir, { recursive: true, force: true });
+    }
+});
+
+test("trovaAppuntoPerArgomento: argomento con una parola chiave in più non è considerato un doppione", async () => {
+    const notesDir = await creaNotesDirTemporanea();
+    try {
+        await scriviAppuntoFinto(notesDir, "react", "hooks", { argomento: "React hooks", titolo: "Introduzione agli Hooks" });
+
+        const trovato = await trovaAppuntoPerArgomento(notesDir, "React Router hooks");
+
+        assert.equal(trovato, null);
+    } finally {
+        await fs.rm(notesDir, { recursive: true, force: true });
+    }
+});
+
 test("trovaAppuntoPerArgomento: nessun appunto corrispondente -> null", async () => {
     const notesDir = await creaNotesDirTemporanea();
     try {
