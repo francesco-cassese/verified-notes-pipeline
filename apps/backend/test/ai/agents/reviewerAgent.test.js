@@ -61,6 +61,26 @@ test("review: errore del modello viene incapsulato in GENERATION_ERROR con causa
 
     await assert.rejects(
         () => reviewer.review("hooks react", draftMinimo, risultatiRicercaMinimi),
-        (err) => err.code === ErrorCodes.GENERATION_ERROR && err.cause === erroreOriginale
+        (err) => err.code === ErrorCodes.GENERATION_ERROR && err.cause === erroreOriginale && err.issues === null
+    );
+});
+
+test("review: OutputParserException (verdetto fuori schema) espone issues leggibili per il retry successivo", async () => {
+    const erroreParsing = new Error(
+        'Failed to parse. Text: "{...}". Error: [{"code":"invalid_type","expected":"object","path":["perimetro"],"message":"Invalid input: expected object, received string"}]\n\nTroubleshooting URL: https://docs.langchain.com/oss/javascript/langchain/errors/OUTPUT_PARSING_FAILURE/'
+    );
+    erroreParsing.name = "OutputParserException";
+    const model = { withStructuredOutput: () => ({ invoke: async () => { throw erroreParsing; } }) };
+    const reviewer = createReviewerAgent({ model, logger: loggerSilenzioso });
+
+    await assert.rejects(
+        () => reviewer.review("hooks react", draftMinimo, risultatiRicercaMinimi),
+        (err) => {
+            assert.equal(err.code, ErrorCodes.GENERATION_ERROR);
+            assert.deepEqual(err.issues, [
+                'Il campo "perimetro" non rispetta lo schema: Invalid input: expected object, received string',
+            ]);
+            return true;
+        }
     );
 });

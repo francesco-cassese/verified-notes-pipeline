@@ -1,5 +1,7 @@
 import { ReviewSchema } from "../schemas/note.schemas.js";
 import { AgentError, ErrorCodes } from "../../utils/errors.js";
+import { buildIstruzioneLivelloIntroduttivo } from "./livelloIntroduttivo.js";
+import { estraiIssuesDaOutputParserException } from "../outputParsingIssues.js";
 
 function formattaFontiPerVerifica(risultatiRicerca) {
     return risultatiRicerca
@@ -33,10 +35,14 @@ ${formattaFontiPerVerifica(risultatiRicerca)}
 
 === ASPETTO 1: PERIMETRO E LIVELLO (campo "perimetro") ===
 1. PERIMETRO: il contenuto resta pertinente all'argomento richiesto "${argomento}", senza divagazioni fuori tema?
-2. COMPLETEZZA: mancano concetti fondamentali per capire "${argomento}" al suo stesso livello? Valuta questo punto restando ancorato al livello implicito dall'argomento (es. se è un'introduzione, i fondamentali sono quelli di un'introduzione): l'assenza di argomenti avanzati o correlati che meriterebbero un appunto a parte (es. sicurezza, autenticazione, gestione errori in produzione, ottimizzazione) NON è una lacuna, a meno che l'argomento stesso non li nomini esplicitamente.
-3. LIVELLO: una o più sezioni spiegano/approfondiscono concetti più avanzati di quanto "${argomento}" richieda, invece di limitarsi al massimo a un accenno? Un semplice riferimento di contesto ("questo si collega a X, che vedrai più avanti") NON è un problema: lo è solo se X viene spiegato per esteso.
+2. LIVELLO: la bozza rispetta questo criterio — lo stesso dato al Generator per scriverla, applicalo identico, non definirne uno tuo:
 
-Imposta "perimetro.approvato" a true SOLO se non ci sono problemi di perimetro, lacune rilevanti allo stesso livello dell'argomento, né sezioni che sconfinano nel livello avanzato. Se approvato è false, "perimetro.motivi" deve elencare in modo specifico e azionabile cosa correggere, un motivo per riga, massimo una frase ciascuno (es. "la sezione 'X' parla di Y, che non è pertinente a ${argomento}", oppure "manca una spiegazione di Z, centrale per questo argomento allo stesso livello", oppure "la sezione 'X' spiega a fondo Y, che è un concetto più avanzato: riducilo a un accenno o rimuovilo").
+${buildIstruzioneLivelloIntroduttivo(argomento)}
+
+Una sezione lo viola se spiega/approfondisce per esteso uno dei punti sempre esclusi elencati sopra, invece di limitarsi al massimo a un accenno di una frase.
+3. COMPLETEZZA: mancano concetti CENTRALI per usare "${argomento}" al suo stesso livello introduttivo (es. la sintassi di base, un parametro essenziale, un caso d'uso comune)? L'assenza di uno qualsiasi dei punti sempre esclusi elencati sopra (funzioni/hook alternativi, tooling, comportamenti interni di dev/debug, ottimizzazioni, ecc.) NON è MAI una lacuna, anche se le fonti ne parlano diffusamente: non chiederne mai l'aggiunta.
+
+Imposta "perimetro.approvato" a true SOLO se non ci sono problemi di perimetro, nessuna lacuna sui concetti centrali, né sezioni che violano il criterio di livello sopra. Se approvato è false, "perimetro.motivi" deve elencare in modo specifico e azionabile cosa correggere, un motivo per riga, massimo una frase ciascuno (es. "la sezione 'X' parla di Y, che non è pertinente a ${argomento}", oppure "manca la spiegazione di Z, un concetto centrale per questo argomento allo stesso livello", oppure "la sezione 'X' spiega a fondo Y, che rientra tra i punti sempre esclusi da un'introduzione: riducilo a un accenno o rimuovilo").
 
 === ASPETTO 2: ADERENZA ALLE FONTI (campo "aderenza") ===
 Controlla che i fatti, la sintassi e gli esempi scritti nella bozza siano supportati dagli estratti delle fonti sopra, NON dalla conoscenza pregressa di chi ha scritto la bozza sull'argomento "${argomento}". Per le fonti senza estratto disponibile, la bozza deve restare generica sui loro dettagli specifici: va bene citarle come link, non va bene descriverne il contenuto come se l'estratto fosse stato letto.
@@ -77,11 +83,13 @@ function createReviewerAgent({ model, logger }) {
 
             return verdetto;
         } catch (error) {
-            throw new AgentError(
+            const agentError = new AgentError(
                 `Revisione fallita per l'argomento "${argomento}"`,
                 ErrorCodes.GENERATION_ERROR,
                 error
             );
+            agentError.issues = estraiIssuesDaOutputParserException(error);
+            throw agentError;
         }
     }
 

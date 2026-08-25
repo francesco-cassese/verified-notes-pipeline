@@ -13,8 +13,14 @@ const MAX_RISULTATI = 3;
 
 // Tetto ai caratteri di testo estratto per singola pagina: senza questo limite
 // una pagina di doc molto lunga (es. un intero manuale) esaurirebbe da sola il
-// budget di token utile per generare l'appunto.
-const MAX_CONTENUTO_CHARS = 6000;
+// budget di token utile per generare l'appunto. 6000 si è rivelato troppo
+// stretto per pagine di riferimento ufficiali densE (es. react.dev/useEffect,
+// 37.000+ caratteri): il generatore riceveva solo il 16% della pagina,
+// troncata a metà frase, e completava i dettagli mancanti a memoria — proprio
+// ciò che il controllo di aderenza alle fonti è pensato per rifiutare. 20000
+// copre molto più contenuto reale a un costo aggiuntivo minimo (pochi
+// centesimi per tentativo con il modello di default).
+const MAX_CONTENUTO_CHARS = 20_000;
 
 // Blocca SSRF verso la rete interna: anche se l'hostname è su un dominio della
 // whitelist (isOfficialUrl), un DNS compromesso/rebinding potrebbe farlo

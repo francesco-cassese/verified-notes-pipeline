@@ -166,6 +166,40 @@ test("run: la bozza viola lo schema (OutputParserException) -> gli issues arriva
     assert.deepEqual(chiamateGenerate[1], ['Il campo "erroriComuni.1.soluzione" non rispetta lo schema: troppo lungo']);
 });
 
+test("run: il verdetto del reviewer viola lo schema (OutputParserException) -> gli issues arrivano come feedback al tentativo successivo", async () => {
+    const chiamateGenerate = [];
+    let tentativo = 0;
+    const generator = {
+        generate: async (argomento, opts) => {
+            tentativo += 1;
+            chiamateGenerate.push(opts.feedback);
+            return { draft: { titolo: `bozza-${tentativo}` }, risultatiRicerca: [] };
+        },
+    };
+    const validator = { validate: (draft) => ({ success: true, data: draft }) };
+    const reviewer = {
+        review: async () => {
+            if (tentativo === 1) {
+                const errore = new AgentError("verdetto fuori schema", ErrorCodes.GENERATION_ERROR);
+                errore.issues = ['Il campo "perimetro" non rispetta lo schema: atteso oggetto, ricevuta stringa'];
+                throw errore;
+            }
+            return { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: true, motivi: [] } };
+        },
+    };
+    const writer = { write: async (data) => data };
+
+    const orchestrator = createNoteOrchestrator({
+        generator, validator, reviewer, writer,
+        logger: loggerSilenzioso, maxAttempts: 3,
+    });
+    const risultato = await orchestrator.run("argomento");
+
+    assert.equal(risultato.status, "success");
+    assert.deepEqual(chiamateGenerate[0], []);
+    assert.deepEqual(chiamateGenerate[1], ['Il campo "perimetro" non rispetta lo schema: atteso oggetto, ricevuta stringa']);
+});
+
 test("run: perimetro mai approvato -> esaurisce i tentativi con motivo 'validation'", async () => {
     const generator = { generate: async () => ({ draft: { titolo: "x" }, risultatiRicerca: [] }) };
     const validator = { validate: (draft) => ({ success: true, data: draft }) };

@@ -55,7 +55,11 @@ const NoteDraftSchema = z.object({
         .max(6, "Troppe sezioni nella nota"),
     fonti: z.array(FonteSchema)
         .max(10, "Troppe fonti citate nella nota"),
-    keyTakeaways: z.array(z.string().min(1).max(200))
+    // 300 e non 200 per lo stesso motivo di ErroreComuneSchema.soluzione: un
+    // key takeaway completo e utile eccede spesso 200 caratteri in pratica,
+    // causando lo stesso OutputParserException non recuperabile a metà
+    // generazione.
+    keyTakeaways: z.array(z.string().min(1).max(300))
         .min(1, "Serve almeno un key takeaway")
         .max(8, "Troppi key takeaways"),
     glossario: z.array(GlossarioVoceSchema)

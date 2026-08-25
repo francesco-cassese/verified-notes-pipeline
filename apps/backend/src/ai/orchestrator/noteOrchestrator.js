@@ -91,6 +91,14 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
             try {
                 esitoRevisione = await reviewer.review(argomento, result.data, risultatiRicerca);
             } catch (error) {
+                // Come per il generator: se la risposta del Reviewer ha violato lo
+                // schema (es. un campo annidato arrivato come stringa invece che
+                // come oggetto), portiamo avanti il feedback specifico invece di
+                // ritentare alla cieca.
+                if (error.issues) {
+                    lastIssues = error.issues;
+                }
+
                 logger.error("orchestrator", "Revisione fallita", {
                     argomento,
                     attempt,
