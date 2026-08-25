@@ -12,6 +12,8 @@
     --chip-bg: #eef2ff;
     --success: #1e7e34;
     --success-bg: #e8f6ec;
+    --warning: #8a5a00;
+    --warning-bg: #fff3e0;
 
     --content-max-width: 900px;
     --navbar-height: 3.5rem;
@@ -31,6 +33,8 @@
         --chip-bg: #23273a;
         --success: #6fd08c;
         --success-bg: #17301f;
+        --warning: #e0a95c;
+        --warning-bg: #3a2c14;
     }
 }
 

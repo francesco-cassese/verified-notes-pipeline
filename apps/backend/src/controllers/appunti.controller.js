@@ -35,6 +35,21 @@ function createAppuntiController(orchestrator = defaultOrchestrator, archive = d
         }
 
         try {
+            const esistente = await archive.trovaAppuntoPerArgomento(notesDir, parsed.data.argomento);
+            if (esistente) {
+                inviaEvento("risultato", { esito: "duplicato", ...esistente });
+                return res.end();
+            }
+        } catch (error) {
+            // Il controllo dei doppioni è solo un'ottimizzazione: se la lettura
+            // dell'archivio fallisce non blocchiamo la generazione per questo,
+            // proseguiamo come se non fosse stato trovato nulla.
+            logger.warn("appuntiController", "Controllo doppioni fallito, proseguo con la generazione", {
+                errore: error.message,
+            });
+        }
+
+        try {
             const result = await orchestrator.run(parsed.data.argomento, {
                 onFase: (fase) => inviaEvento("fase", fase),
             });

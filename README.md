@@ -40,6 +40,8 @@ L'**orchestratore** tiene insieme tutto: se un controllo fallisce, il motivo spe
 
 Nel caso migliore una generazione richiede quindi 1 ricerca web + 2 chiamate LLM (Generator, Reviewer); nel caso peggiore (3 tentativi, sempre respinta) al massimo 1 ricerca + 6 chiamate LLM: la ricerca gira una sola volta per argomento e Reviewer sostituisce due chiamate separate con una.
 
+Prima ancora di avviare la pipeline, il controller confronta l'argomento richiesto con quelli già salvati in archivio (case-insensitive): se un appunto per lo stesso argomento esiste già, restituisce subito un evento `duplicato` con il riferimento all'appunto esistente, a costo zero (nessuna ricerca, nessuna chiamata LLM).
+
 L'avanzamento viene trasmesso al frontend via Server-Sent Events man mano che ogni fase viene eseguita, dato che una generazione completa può richiedere diverse chiamate LLM in sequenza.
 
 ## Sicurezza
@@ -99,7 +101,7 @@ In produzione, `pnpm build` compila il frontend dentro `apps/backend/public`, e 
 
 | Metodo | Percorso | Descrizione |
 |---|---|---|
-| `POST` | `/api/appunti` | Genera un appunto per un argomento; trasmette l'avanzamento della pipeline come Server-Sent Events, terminando con un evento `risultato` (successo o errore). |
+| `POST` | `/api/appunti` | Genera un appunto per un argomento; trasmette l'avanzamento della pipeline come Server-Sent Events, terminando con un evento `risultato` (`successo`, `errore`, o `duplicato` se l'argomento è già in archivio — in quel caso la pipeline non viene nemmeno avviata). |
 | `GET` | `/api/appunti/cartelle` | Elenca le cartelle modulo/tecnologia con il conteggio degli appunti. |
 | `GET` | `/api/appunti/cartelle/:cartella` | Elenca gli appunti in una cartella. |
 | `GET` | `/api/appunti/cartelle/:cartella/:nomeFile` | Legge un singolo appunto. |

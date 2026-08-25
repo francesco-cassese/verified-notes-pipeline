@@ -203,6 +203,23 @@ button:disabled {
     text-decoration: underline;
 }
 
+/* --- Avviso argomento duplicato --- */
+
+.avviso-duplicato {
+    background: var(--warning-bg);
+    border: 1px solid var(--warning);
+    border-radius: 14px;
+    padding: 1.5rem 1.6rem;
+    margin-bottom: 1.5rem;
+}
+
+.avviso-duplicato-titolo {
+    color: var(--warning);
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin: 0 0 0.5rem;
+}
+
 /* --- Archivio: griglia cartelle --- */
 
 .titolo-cartella {

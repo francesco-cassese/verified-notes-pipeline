@@ -117,4 +117,42 @@ async function leggiAppunto(baseDir, cartella, nomeFile) {
     }
 }
 
-export { listCartelle, listAppunti, leggiAppunto };
+// Cerca tra tutti gli appunti già salvati uno con lo stesso argomento
+// (confronto case-insensitive sul campo "argomento", non sul titolo scelto
+// dal modello, che può differire dalla richiesta originale): permette al
+// controller di rifiutare una generazione duplicata prima di avviare la
+// pipeline (ricerca + più chiamate LLM, tutte a pagamento) invece di scoprire
+// il doppione solo a fine generazione. Stessa strategia json-poi-frontmatter
+// di listAppunti/leggiAppunto sopra.
+async function trovaAppuntoPerArgomento(baseDir, argomento) {
+    const normalizzato = argomento.trim().toLowerCase();
+    const cartelle = await listCartelle(baseDir);
+
+    for (const { cartella } of cartelle) {
+        const dir = path.join(baseDir, cartella);
+        const nomiMd = (await fs.readdir(dir)).filter((f) => f.endsWith(".md"));
+
+        for (const nomeFile of nomiMd) {
+            const jsonPath = path.join(dir, nomeFile.replace(/\.md$/, ".json"));
+            let argomentoSalvato;
+            let titolo;
+
+            try {
+                const json = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
+                argomentoSalvato = json.argomento;
+                titolo = json.titolo;
+            } catch {
+                const contenuto = await fs.readFile(path.join(dir, nomeFile), "utf-8");
+                ({ argomento: argomentoSalvato, titolo } = estraiFrontmatter(contenuto).meta);
+            }
+
+            if (argomentoSalvato?.trim().toLowerCase() === normalizzato) {
+                return { cartella, nomeFile, titolo };
+            }
+        }
+    }
+
+    return null;
+}
+
+export { listCartelle, listAppunti, leggiAppunto, trovaAppuntoPerArgomento };

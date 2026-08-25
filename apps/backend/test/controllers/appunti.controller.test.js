@@ -4,10 +4,10 @@ import http from "node:http";
 import express from "express";
 import createAppuntiController from "../../src/controllers/appunti.controller.js";
 
-function creaServer(orchestratorFinto) {
+function creaServer(orchestratorFinto, archivioFinto = { trovaAppuntoPerArgomento: async () => null }) {
     const app = express();
     app.use(express.json());
-    const controller = createAppuntiController(orchestratorFinto, { listCartelle: async () => [] }, "notesDir-test");
+    const controller = createAppuntiController(orchestratorFinto, archivioFinto, "notesDir-test");
     app.post("/api/appunti", controller.generaAppunto);
     return http.createServer(app);
 }
@@ -80,6 +80,61 @@ test("generaAppunto: argomento non valido -> subito un evento risultato di error
         assert.equal(eventi[0].evento, "risultato");
         assert.equal(eventi[0].dati.esito, "errore");
         assert.ok(eventi[0].dati.issues.length > 0);
+    } finally {
+        server.close();
+    }
+});
+
+test("generaAppunto: argomento già presente in archivio -> evento risultato duplicato, orchestrator mai chiamato", async () => {
+    const orchestratorFinto = { run: async () => { throw new Error("non deve essere chiamato"); } };
+    const archivioFinto = {
+        trovaAppuntoPerArgomento: async () => ({ cartella: "react", nomeFile: "hooks.md", titolo: "Introduzione agli Hooks" }),
+    };
+    const server = creaServer(orchestratorFinto, archivioFinto);
+    const port = await avviaServer(server);
+
+    try {
+        const risposta = await fetch(`http://localhost:${port}/api/appunti`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ argomento: "react hooks" }),
+        });
+
+        const eventi = parseEventiSSE(await risposta.text());
+
+        assert.equal(eventi.length, 1);
+        assert.equal(eventi[0].evento, "risultato");
+        assert.equal(eventi[0].dati.esito, "duplicato");
+        assert.equal(eventi[0].dati.cartella, "react");
+        assert.equal(eventi[0].dati.nomeFile, "hooks.md");
+        assert.equal(eventi[0].dati.titolo, "Introduzione agli Hooks");
+    } finally {
+        server.close();
+    }
+});
+
+test("generaAppunto: il controllo doppioni fallisce -> prosegue comunque con la generazione", async () => {
+    const orchestratorFinto = {
+        run: async (argomento, { onFase }) => {
+            onFase({ fase: "ricerca", messaggio: "Ricerca...", tentativo: 1, tentativiMax: 3 });
+            return { status: "success", note: { titolo: "Fake" }, attempts: 1 };
+        },
+    };
+    const archivioFinto = { trovaAppuntoPerArgomento: async () => { throw new Error("disco non disponibile"); } };
+    const server = creaServer(orchestratorFinto, archivioFinto);
+    const port = await avviaServer(server);
+
+    try {
+        const risposta = await fetch(`http://localhost:${port}/api/appunti`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ argomento: "react hooks" }),
+        });
+
+        const eventi = parseEventiSSE(await risposta.text());
+
+        assert.equal(eventi.at(-1).evento, "risultato");
+        assert.equal(eventi.at(-1).dati.esito, "successo");
     } finally {
         server.close();
     }

@@ -7,6 +7,7 @@ function GeneratorPage() {
     const [generando, setGenerando] = useState(false);
     const [stato, setStato] = useState("");
     const [conferma, setConferma] = useState(null);
+    const [duplicato, setDuplicato] = useState(null);
     const [errore, setErrore] = useState(null);
 
     async function handleSubmit(evento) {
@@ -18,6 +19,7 @@ function GeneratorPage() {
         setGenerando(true);
         setStato("Avvio della generazione...");
         setConferma(null);
+        setDuplicato(null);
         setErrore(null);
 
         function gestisciEvento(evento, dati) {
@@ -28,6 +30,8 @@ function GeneratorPage() {
                 if (dati.esito === "successo") {
                     setConferma(dati.nota);
                     setArgomento("");
+                } else if (dati.esito === "duplicato") {
+                    setDuplicato(dati);
                 } else {
                     setErrore(dati);
                 }
@@ -104,6 +108,18 @@ function GeneratorPage() {
             </form>
 
             <div className="stato-generazione" role="status" aria-live="polite">{stato}</div>
+
+            {duplicato && (
+                <div className="avviso-duplicato">
+                    <p className="avviso-duplicato-titolo">⚠️ Argomento già presente in archivio</p>
+                    <p className="conferma-nota-titolo">{duplicato.titolo}</p>
+                    <div className="conferma-azioni">
+                        <Link to={`/archivio/${duplicato.cartella}/${duplicato.nomeFile}`}>
+                            Apri l'appunto esistente
+                        </Link>
+                    </div>
+                </div>
+            )}
 
             {errore && <Errore dati={errore} />}
 
