@@ -62,3 +62,158 @@ a {
 img, svg {
     max-width: 100%;
 }
+
+/* --- Base tipografica e controlli di form, condivisi da tutta l'app ---
+   Selettori su elemento (non su classe): restano qui invece che in un CSS
+   module perché i CSS module scopano solo classi/id. Un "button {}" scritto
+   dentro un .module.css verrebbe rinominato in una classe locale e smetterebbe
+   di applicarsi automaticamente a ogni <button>: qui invece serve proprio
+   questo, un default valido ovunque senza dover aggiungere una className a
+   ogni bottone/input/form della app. */
+
+h1 {
+    font-size: 1.9rem;
+    margin: 0 0 0.4rem;
+}
+
+@media (max-width: 640px) {
+    h1 {
+        font-size: 1.5rem;
+    }
+}
+
+form {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 560px) {
+    form {
+        flex-direction: column;
+    }
+}
+
+input[type="text"] {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    font-size: 1rem;
+    min-width: 0;
+}
+
+input[type="text"]:focus {
+    outline: 3px solid var(--accent);
+    outline-offset: 1px;
+}
+
+button {
+    padding: 0.75rem 1.4rem;
+    border-radius: 10px;
+    border: none;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* --- Classi condivise da più pagine/componenti ---
+   Restano classi globali (non CSS module) perché nessun singolo componente
+   le possiede: .page/.subtitle/.generationStatus/.error/.breadcrumb sono
+   usate da quasi ogni pagina, .note/.moduleBadge/.meta dalla card di una
+   nota sia nella vista strutturata (Nota.jsx) sia nel fallback markdown
+   (ArchivioDettaglio.jsx). Le classi specifiche di un solo componente restano
+   invece nel suo *.module.css. */
+
+.page {
+    width: 100%;
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    padding: 2rem 1.25rem 4rem;
+}
+
+@media (max-width: 640px) {
+    .page {
+        padding: 1.5rem 1rem 3rem;
+    }
+}
+
+.subtitle {
+    color: var(--muted);
+    margin: 0 0 1.75rem;
+    font-size: 1.05rem;
+}
+
+.generationStatus {
+    color: var(--muted);
+    font-size: 1rem;
+    margin-bottom: 1.5rem;
+    min-height: 1.4em;
+}
+
+.error {
+    background: var(--error-bg);
+    color: var(--error);
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    font-size: 1rem;
+    white-space: pre-wrap;
+    margin-bottom: 1.5rem;
+}
+
+.breadcrumb {
+    display: inline-block;
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
+}
+
+.breadcrumb:hover {
+    text-decoration: underline;
+}
+
+.note {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem 1.9rem;
+}
+
+@media (max-width: 640px) {
+    .note {
+        padding: 1.25rem 1.3rem;
+    }
+}
+
+.note h2 {
+    margin-top: 0.4rem;
+    font-size: 1.5rem;
+}
+
+.moduleBadge {
+    display: inline-block;
+    background: var(--accent);
+    color: var(--accent-contrast);
+    border-radius: 6px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.meta {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-bottom: 1.25rem;
+}

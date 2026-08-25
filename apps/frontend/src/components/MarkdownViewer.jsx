@@ -1,6 +1,7 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
+import styles from "./MarkdownViewer.module.css";
 
 // Con sectionNumber impostato (solo dentro una sezione numerata di Nota.jsx),
 // prefissa i sottotitoli con la numerazione gerarchica del template (1.1,
@@ -26,9 +27,13 @@ function buildHeadingComponents(sectionNumber) {
     };
 }
 
-function MarkdownViewer({ markdown, sectionNumber }) {
+function MarkdownViewer({ markdown, sectionNumber, senzaMargineSuperiore }) {
+    const classi = senzaMargineSuperiore
+        ? `${styles.markdownViewer} ${styles.noTopMargin}`
+        : styles.markdownViewer;
+
     return (
-        <div className="markdown-viewer">
+        <div className={classi}>
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeSlug]}

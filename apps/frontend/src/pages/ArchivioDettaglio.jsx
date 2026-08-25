@@ -10,17 +10,17 @@ function ArchivioDettaglio() {
     );
 
     return (
-        <main className="page page-archivio">
+        <main className="page">
             <Link to={`/archivio/${cartella}`} className="breadcrumb">← {cartella}</Link>
 
-            {caricamento && <p className="stato-generazione">Caricamento...</p>}
-            {errore && <div className="errore">{errore}</div>}
+            {caricamento && <p className="generationStatus">Caricamento...</p>}
+            {errore && <div className="error">{errore}</div>}
 
             {dati && dati.formato === "json" && <Nota nota={dati.nota} />}
 
             {dati && dati.formato === "markdown" && (
-                <article className="nota">
-                    <span className="modulo-badge">{dati.meta.modulo || ""}</span>
+                <article className="note">
+                    <span className="moduleBadge">{dati.meta.modulo || ""}</span>
                     <h2>{dati.meta.titolo}</h2>
                     {dati.meta.creatoIl && (
                         <div className="meta">{new Date(dati.meta.creatoIl).toLocaleString("it-IT")}</div>

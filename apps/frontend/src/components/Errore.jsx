@@ -4,7 +4,7 @@ function Errore({ dati }) {
     const messaggio = (dati.errore || "Errore sconosciuto") + motivo;
 
     return (
-        <div className="errore">
+        <div className="error">
             {messaggio}
             {dettagli ? `\n${dettagli}` : ""}
         </div>

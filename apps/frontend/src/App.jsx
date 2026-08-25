@@ -6,7 +6,6 @@ import ArchivioCartelle from "./pages/ArchivioCartelle.jsx";
 import ArchivioAppunti from "./pages/ArchivioAppunti.jsx";
 import ArchivioDettaglio from "./pages/ArchivioDettaglio.jsx";
 import NotFound from "./pages/NotFound.jsx";
-import "./App.css";
 
 function App() {
     return (

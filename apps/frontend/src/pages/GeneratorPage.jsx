@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Errore from "../components/Errore.jsx";
+import styles from "./GeneratorPage.module.css";
 
 function GeneratorPage() {
     const [argomento, setArgomento] = useState("");
@@ -83,9 +84,9 @@ function GeneratorPage() {
     }
 
     return (
-        <main className="page page-generatore">
+        <main className="page">
             <h1>Generatore di appunti tecnici</h1>
-            <p className="sottotitolo">
+            <p className="subtitle">
                 Genera un appunto basato solo su fonti ufficiali. La generazione può richiedere alcuni secondi.
             </p>
 
@@ -107,13 +108,13 @@ function GeneratorPage() {
                 </button>
             </form>
 
-            <div className="stato-generazione" role="status" aria-live="polite">{stato}</div>
+            <div className="generationStatus" role="status" aria-live="polite">{stato}</div>
 
             {duplicato && (
-                <div className="avviso-duplicato">
-                    <p className="avviso-duplicato-titolo">⚠️ Argomento già presente in archivio</p>
-                    <p className="conferma-nota-titolo">{duplicato.titolo}</p>
-                    <div className="conferma-azioni">
+                <div className={styles.duplicateWarning}>
+                    <p className={styles.duplicateWarningTitle}>⚠️ Argomento già presente in archivio</p>
+                    <p className={styles.confirmationNoteTitle}>{duplicato.titolo}</p>
+                    <div className={styles.confirmationActions}>
                         <Link to={`/archivio/${duplicato.cartella}/${duplicato.nomeFile}`}>
                             Apri l'appunto esistente
                         </Link>
@@ -124,11 +125,11 @@ function GeneratorPage() {
             {errore && <Errore dati={errore} />}
 
             {conferma && (
-                <div className="conferma-salvataggio">
-                    <p className="conferma-titolo">✅ Appunto salvato</p>
-                    <p className="conferma-nota-titolo">{conferma.titolo}</p>
-                    <p className="conferma-percorso">{conferma.percorsoRelativo}</p>
-                    <div className="conferma-azioni">
+                <div className={styles.saveConfirmation}>
+                    <p className={styles.confirmationTitle}>✅ Appunto salvato</p>
+                    <p className={styles.confirmationNoteTitle}>{conferma.titolo}</p>
+                    <p className={styles.confirmationPath}>{conferma.percorsoRelativo}</p>
+                    <div className={styles.confirmationActions}>
                         <Link to={`/archivio/${conferma.cartella}/${conferma.nomeFile}`}>
                             Apri l'appunto
                         </Link>

@@ -1,0 +1,67 @@
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+}
+
+.navbarInner {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+    min-height: var(--navbar-height);
+    padding: 0 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+}
+
+.navbarBrand {
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-decoration: none;
+    padding: 0.6rem 0;
+}
+
+.navbarLinks {
+    display: flex;
+    gap: 1.5rem;
+}
+
+/* NavLink di react-router applica di suo la classe letterale "active", non
+   una classe passata come stringa: con i CSS module quella stringa non
+   corrisponde a nessuna classe locale hashata, quindi qui usiamo la forma a
+   funzione di className (vedi Navbar.jsx) per scegliere esplicitamente
+   .navLink / .navLinkActive invece di affidarci al nome che aggiunge il
+   router. */
+
+.navLink {
+    text-decoration: none;
+    color: var(--muted);
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 1rem 0;
+    border-bottom: 2px solid transparent;
+}
+
+.navLinkActive {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+@media (max-width: 480px) {
+    .navbarInner {
+        min-height: auto;
+        padding: 0.6rem 1rem;
+    }
+
+    .navbarLinks {
+        gap: 1rem;
+    }
+
+    .navLink {
+        padding: 0.3rem 0;
+    }
+}

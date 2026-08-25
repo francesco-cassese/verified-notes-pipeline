@@ -1,0 +1,70 @@
+.markdownViewer {
+    margin-top: 1.25rem;
+    line-height: 1.65;
+    font-size: 1rem;
+}
+
+.markdownViewer h2 {
+    font-size: 1.3rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.25rem;
+    margin: 1.5rem 0 0.75rem;
+}
+
+.markdownViewer h2:first-child {
+    border-top: none;
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.markdownViewer p {
+    margin: 0 0 1rem;
+}
+
+.markdownViewer ul, .markdownViewer ol {
+    padding-left: 1.3rem;
+}
+
+.markdownViewer a {
+    color: var(--accent);
+}
+
+.markdownViewer pre {
+    background: var(--chip-bg);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.markdownViewer code {
+    font-family: ui-monospace, Consolas, monospace;
+    font-size: 0.9em;
+}
+
+.markdownViewer pre code {
+    font-size: 0.85rem;
+}
+
+.markdownViewer table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.markdownViewer th, .markdownViewer td {
+    text-align: left;
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+}
+
+/* Applicata da Nota.jsx quando il viewer è già dentro una sezione titolata
+   (niente margine extra in cima): prima era la regola incrociata
+   ".sezione-contenuto .markdown-viewer" in App.css, che leggeva una classe
+   di Nota.jsx per modificare lo stile di questo componente. Con i CSS module
+   ogni file ha le sue classi locali, quindi quel tipo di accoppiamento va
+   espresso passando una prop (vedi il flag senzaMargineSuperiore), non via
+   un selettore CSS scritto da fuori. */
+.noTopMargin {
+    margin-top: 0;
+}

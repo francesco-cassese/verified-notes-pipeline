@@ -1,0 +1,33 @@
+.foldersGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 1rem;
+}
+
+.folderCard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.2rem;
+    text-decoration: none;
+    color: var(--text);
+    transition: border-color 0.15s ease;
+}
+
+.folderCard:hover {
+    border-color: var(--accent);
+}
+
+.folderName {
+    font-weight: 700;
+    font-size: 1.05rem;
+    text-transform: capitalize;
+}
+
+.folderCount {
+    color: var(--muted);
+    font-size: 0.9rem;
+}

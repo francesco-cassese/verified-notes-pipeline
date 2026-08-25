@@ -1,26 +1,27 @@
 import { Link, useParams } from "react-router-dom";
 import useFetchJson from "../hooks/useFetchJson.js";
+import styles from "./ArchivioAppunti.module.css";
 
 function ArchivioAppunti() {
     const { cartella } = useParams();
     const { dati, caricamento, errore } = useFetchJson(`/api/appunti/cartelle/${cartella}`);
 
     return (
-        <main className="page page-archivio">
+        <main className="page">
             <Link to="/archivio" className="breadcrumb">← Tutte le cartelle</Link>
-            <h1 className="titolo-cartella">{cartella}</h1>
+            <h1 className={styles.folderTitle}>{cartella}</h1>
 
-            {caricamento && <p className="stato-generazione">Caricamento...</p>}
-            {errore && <div className="errore">{errore}</div>}
+            {caricamento && <p className="generationStatus">Caricamento...</p>}
+            {errore && <div className="error">{errore}</div>}
 
             {dati && (
-                <ul className="appunti-lista">
+                <ul className={styles.notesList}>
                     {dati.appunti.map((a) => (
                         <li key={a.nomeFile}>
-                            <Link to={`/archivio/${cartella}/${a.nomeFile}`} className="appunto-riga">
-                                <span className="appunto-titolo">{a.titolo || a.nomeFile}</span>
+                            <Link to={`/archivio/${cartella}/${a.nomeFile}`} className={styles.noteRow}>
+                                <span className={styles.noteTitle}>{a.titolo || a.nomeFile}</span>
                                 {a.creatoIl && (
-                                    <span className="appunto-data">
+                                    <span className={styles.noteDate}>
                                         {new Date(a.creatoIl).toLocaleDateString("it-IT")}
                                     </span>
                                 )}

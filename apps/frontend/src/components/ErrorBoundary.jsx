@@ -24,10 +24,10 @@ class ErrorBoundary extends Component {
             return (
                 <main className="page">
                     <h1>Qualcosa è andato storto</h1>
-                    <p className="sottotitolo">
+                    <p className="subtitle">
                         Si è verificato un errore imprevisto in questa pagina. Puoi provare a ricaricarla.
                     </p>
-                    <div className="errore">{this.state.errore.message || "Errore sconosciuto"}</div>
+                    <div className="error">{this.state.errore.message || "Errore sconosciuto"}</div>
                     <button type="button" onClick={() => window.location.assign("/")}>
                         Torna alla home
                     </button>

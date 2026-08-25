@@ -1,6 +1,7 @@
 import { slugify } from "../utils/slugify.js";
 import { infoFonte } from "../utils/sourceCatalog.js";
 import MarkdownViewer from "./MarkdownViewer.jsx";
+import styles from "./Nota.module.css";
 
 // Estrae i sottotitoli (### ...) dal markdown di una sezione, per mostrarli
 // come voci annidate 1.1/1.2 nell'indice: ignora quelli dentro un blocco di
@@ -30,8 +31,8 @@ function Nota({ nota, tentativi }) {
     const erroriComuni = nota.erroriComuni || [];
 
     return (
-        <article className="nota">
-            <span className="modulo-badge">{nota.modulo || ""}</span>
+        <article className="note">
+            <span className="moduleBadge">{nota.modulo || ""}</span>
             <h2>{nota.titolo || nota.argomento}</h2>
             <div className="meta">
                 {tentativi && <>Generato in {tentativi} tentativo{tentativi > 1 ? "i" : ""} &middot; </>}
@@ -39,14 +40,14 @@ function Nota({ nota, tentativi }) {
             </div>
 
             {tag.length > 0 && (
-                <div className="tag-list">
+                <div className={styles.tagList}>
                     {tag.map((t) => (
-                        <span className="tag" key={t}>{t}</span>
+                        <span className={styles.tag} key={t}>{t}</span>
                     ))}
                 </div>
             )}
 
-            <nav className="indice">
+            <nav className={styles.tableOfContents}>
                 <h3>📍 Indice Rapido</h3>
                 <ol>
                     {sezioni.map((s, i) => {
@@ -55,7 +56,7 @@ function Nota({ nota, tentativi }) {
                             <li key={s.titolo}>
                                 <a href={`#${slugify(s.titolo)}`}>{s.titolo}</a>
                                 {sottotitoli.length > 0 && (
-                                    <ol className="indice-sotto">
+                                    <ol className={styles.tableOfContentsSubList}>
                                         {sottotitoli.map((sub, j) => (
                                             <li key={sub}>{i + 1}.{j + 1} {sub}</li>
                                         ))}
@@ -72,15 +73,15 @@ function Nota({ nota, tentativi }) {
             </nav>
 
             {sezioni.map((s, i) => (
-                <section className="sezione" id={slugify(s.titolo)} key={s.titolo}>
+                <section className={styles.section} id={slugify(s.titolo)} key={s.titolo}>
                     <h3>{i + 1}. {s.titolo}</h3>
-                    <div className="sezione-contenuto">
-                        <MarkdownViewer markdown={s.contenuto} sectionNumber={i + 1} />
+                    <div className={styles.sectionContent}>
+                        <MarkdownViewer markdown={s.contenuto} sectionNumber={i + 1} senzaMargineSuperiore />
                     </div>
                 </section>
             ))}
 
-            <section className="errori-comuni" id="errori-comuni">
+            <section id="errori-comuni">
                 <h3>⚠️ Errori Comuni</h3>
                 <table>
                     <thead>
@@ -100,7 +101,7 @@ function Nota({ nota, tentativi }) {
                 </table>
             </section>
 
-            <section className="fonti" id="risorse">
+            <section className={styles.sources} id="risorse">
                 <h3>🔗 Risorse e Documentazione</h3>
                 {fonti.length > 0 ? (
                     <ul>
@@ -121,9 +122,9 @@ function Nota({ nota, tentativi }) {
                 )}
             </section>
 
-            <section className="takeaways" id="takeaways">
+            <section className={styles.takeaways} id="takeaways">
                 <h3>🚀 Key Takeaways</h3>
-                <p className="sezione-sottotitolo">I punti fondamentali da ricordare.</p>
+                <p className={styles.sectionSubtitle}>I punti fondamentali da ricordare.</p>
                 <ul>
                     {keyTakeaways.map((k) => (
                         <li key={k}>{k}</li>
@@ -132,9 +133,9 @@ function Nota({ nota, tentativi }) {
             </section>
 
             {glossario.length > 0 && (
-                <section className="glossario" id="glossario">
+                <section className={styles.glossary} id="glossario">
                     <h3>📖 Glossario</h3>
-                    <p className="sezione-sottotitolo">Termini tecnici spiegati in modo semplice, a fianco della definizione formale.</p>
+                    <p className={styles.sectionSubtitle}>Termini tecnici spiegati in modo semplice, a fianco della definizione formale.</p>
                     <table>
                         <thead>
                             <tr>
@@ -156,7 +157,7 @@ function Nota({ nota, tentativi }) {
                 </section>
             )}
 
-            <div className="nomefile">Salvato come {nota.percorsoRelativo || nota.nomeFile}</div>
+            <div className={styles.fileName}>Salvato come {nota.percorsoRelativo || nota.nomeFile}</div>
         </article>
     );
 }
