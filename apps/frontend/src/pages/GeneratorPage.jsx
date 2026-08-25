@@ -1,86 +1,14 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import ErrorMessage from "../components/ErrorMessage.jsx";
+import { useGeneration } from "../context/GenerationContext.jsx";
 import styles from "./GeneratorPage.module.css";
 
 function GeneratorPage() {
-    const [topic, setTopic] = useState("");
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [status, setStatus] = useState("");
-    const [confirmation, setConfirmation] = useState(null);
-    const [duplicate, setDuplicate] = useState(null);
-    const [error, setError] = useState(null);
+    const { topic, setTopic, isGenerating, status, confirmation, duplicate, error, startGeneration } = useGeneration();
 
-    async function handleSubmit(event) {
+    function handleSubmit(event) {
         event.preventDefault();
-
-        const value = topic.trim();
-        if (value.length < 3) return;
-
-        setIsGenerating(true);
-        setStatus("Avvio della generazione...");
-        setConfirmation(null);
-        setDuplicate(null);
-        setError(null);
-
-        function handleEvent(eventName, data) {
-            if (eventName === "phase") {
-                const attemptText = data.maxAttempts > 1 ? ` (tentativo ${data.attempt} di ${data.maxAttempts})` : "";
-                setStatus(data.message + attemptText);
-            } else if (eventName === "result") {
-                if (data.outcome === "success") {
-                    setConfirmation(data.note);
-                    setTopic("");
-                } else if (data.outcome === "duplicate") {
-                    setDuplicate(data);
-                } else {
-                    setError(data);
-                }
-            }
-        }
-
-        try {
-            const response = await fetch("/api/notes", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ topic: value }),
-            });
-
-            // La risposta è uno stream Server-Sent Events (event: ...\ndata: ...\n\n),
-            // non un singolo JSON: la leggiamo a blocchi man mano che arrivano, così
-            // possiamo mostrare la fase corrente invece di attendere in silenzio
-            // fino all'evento finale "result".
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = "";
-
-            while (true) {
-                const { value: chunk, done } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(chunk, { stream: true });
-
-                let boundaryIndex;
-                while ((boundaryIndex = buffer.indexOf("\n\n")) !== -1) {
-                    const block = buffer.slice(0, boundaryIndex);
-                    buffer = buffer.slice(boundaryIndex + 2);
-
-                    const lines = block.split("\n");
-                    const eventLine = lines.find((r) => r.startsWith("event:"));
-                    const dataLine = lines.find((r) => r.startsWith("data:"));
-                    if (!eventLine || !dataLine) continue;
-
-                    handleEvent(eventLine.slice("event:".length).trim(), JSON.parse(dataLine.slice("data:".length).trim()));
-                }
-            }
-
-            setStatus("");
-        } catch (err) {
-            setStatus("");
-            setError({ error: "Impossibile contattare il server: " + err.message });
-        } finally {
-            setIsGenerating(false);
-        }
+        startGeneration(topic);
     }
 
     return (

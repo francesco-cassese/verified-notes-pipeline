@@ -1,6 +1,7 @@
 import { Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
+import { GenerationProvider } from "./context/GenerationContext.jsx";
 import GeneratorPage from "./pages/GeneratorPage.jsx";
 import ArchivePage from "./pages/ArchivePage.jsx";
 import FolderPage from "./pages/FolderPage.jsx";
@@ -11,7 +12,7 @@ function App() {
     const location = useLocation();
 
     return (
-        <>
+        <GenerationProvider>
             <Navbar />
             <ErrorBoundary resetKey={location.pathname}>
                 <Routes>
@@ -22,7 +23,7 @@ function App() {
                     <Route path="*" element={<NotFound />} />
                 </Routes>
             </ErrorBoundary>
-        </>
+        </GenerationProvider>
     );
 }
 
