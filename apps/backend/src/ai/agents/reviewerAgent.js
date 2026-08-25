@@ -17,12 +17,18 @@ function formattaFontiPerVerifica(risultatiRicerca) {
 // incollate nel contesto una volta sola invece che due, dimezzando i token
 // di input per questo stadio senza ridurre il rigore di nessuno dei due
 // controlli, che restano criteri e verdetti indipendenti.
+//
+// Bozza e fonti PRIMA, criteri di giudizio DOPO — stesso motivo del Generator
+// (vedi generatorAgent.js): con estratti fino a 20.000 caratteri per fonte,
+// i criteri di valutazione vanno tenuti nell'ultima parte del prompt, il
+// punto di massimo richiamo per il modello, non prima del materiale che deve
+// giudicare.
 function buildPromptRevisione(argomento, draft, risultatiRicerca) {
     const sezioniTesto = draft.sezioni
         .map((s) => `### ${s.titolo}\n${s.contenuto}`)
         .join("\n\n");
 
-    return `Sei un revisore tecnico. Valuta DUE aspetti indipendenti di questa bozza di appunto e restituisci un verdetto separato per ciascuno (la conformità strutturale è già verificata altrove, non valutarla). Un problema in un aspetto non implica nulla sull'altro: giudicali separatamente.
+    return `Di seguito trovi la bozza di un appunto sull'argomento "${argomento}" e gli estratti delle fonti ufficiali usate per scriverla. Il tuo compito di valutazione — cosa giudicare e come — è spiegato per intero dopo questi due blocchi.
 
 Titolo generato: "${draft.titolo}"
 Modulo: "${draft.modulo}"
@@ -32,6 +38,10 @@ ${sezioniTesto}
 
 Estratti delle fonti ufficiali trovate (l'unica base ammessa per i fatti specifici):
 ${formattaFontiPerVerifica(risultatiRicerca)}
+
+---
+
+Sei un revisore tecnico. Valuta DUE aspetti indipendenti della bozza mostrata sopra e restituisci un verdetto separato per ciascuno (la conformità strutturale è già verificata altrove, non valutarla). Un problema in un aspetto non implica nulla sull'altro: giudicali separatamente.
 
 === ASPETTO 1: PERIMETRO E LIVELLO (campo "perimetro") ===
 1. PERIMETRO: il contenuto resta pertinente all'argomento richiesto "${argomento}", senza divagazioni fuori tema?

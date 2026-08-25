@@ -24,8 +24,23 @@ function formattaFeedback(feedback) {
 // imposto di nuovo, in modo deterministico, dal Validator via FonteSchema:
 // due strati di difesa contro il rischio che il modello citi una fonte a
 // memoria non verificata invece di una di quelle fornite.
+//
+// Ordine del prompt: fonti PRIMA, istruzioni/vincoli DOPO — non il contrario.
+// Con estratti fino a 20.000 caratteri per fonte, mettere il vincolo di
+// perimetro prima del testo delle fonti lo relegava nel punto di minor
+// richiamo del contesto (il classico effetto "lost in the middle": Anthropic
+// stessa raccomanda di posizionare i documenti lunghi in cima e le istruzioni
+// alla fine, per massimizzare quanto il modello le "ricorda" nel momento in
+// cui genera). Qui i vincoli restano quindi le ULTIME righe che il modello
+// legge prima di scrivere, non le prime.
 function buildPrompt(argomento, risultatiRicerca, feedback) {
-    return `Genera un appunto tecnico di programmazione, in italiano, con tono professionale e diretto (niente ironia o linguaggio scherzoso), sull'argomento: "${argomento}".
+    return `Di seguito trovi alcune pagine ufficiali trovate tramite ricerca web sull'argomento "${argomento}", alcune con un estratto del loro contenuto. Il compito esatto — cosa scrivere, in che formato, con quali vincoli — è spiegato per intero DOPO gli estratti: leggili con attenzione, le istruzioni operative arrivano subito dopo.
+
+${formattaFonti(risultatiRicerca)}
+
+---
+
+Genera un appunto tecnico di programmazione, in italiano, con tono professionale e diretto (niente ironia o linguaggio scherzoso), sull'argomento: "${argomento}".
 
 Usa un linguaggio semplice e chiaro, adatto a uno studente che sta muovendo i primi passi su questo argomento: frasi brevi, dirette, senza fronzoli. Se usi un termine tecnico non ovvio, spiegalo subito la prima volta che compare, con parole semplici, invece di darlo per scontato. Preferisci esempi concreti a descrizioni astratte.
 
@@ -41,14 +56,11 @@ Struttura l'appunto seguendo esattamente questi campi:
 
 ${buildIstruzioneLivelloIntroduttivo(argomento)}
 
-Le seguenti pagine ufficiali sono state trovate tramite ricerca web, alcune con un estratto del loro contenuto:
-${formattaFonti(risultatiRicerca)}
-
-Basa i fatti, la sintassi e gli esempi che scrivi sugli estratti forniti sopra, non sulla tua conoscenza pregressa: se un estratto è disponibile e contraddice quello che ricordi, segui l'estratto (potrebbe essere più aggiornato). Se per una fonte l'estratto non è disponibile, resta prudente e generico sui dettagli specifici di quella pagina invece di inventarli.
+Basa i fatti, la sintassi e gli esempi che scrivi sugli estratti mostrati sopra, non sulla tua conoscenza pregressa: se un estratto è disponibile e contraddice quello che ricordi, segui l'estratto (potrebbe essere più aggiornato). Se per una fonte l'estratto non è disponibile, resta prudente e generico sui dettagli specifici di quella pagina invece di inventarli.
 
 Non nominare, confrontare o suggerire come alternativa altre funzioni, metodi, classi o linguaggi diversi da "${argomento}", anche se corretti secondo la tua conoscenza pregressa o descritti in una delle fonti trovate: resta strettamente nel perimetro di "${argomento}", senza divagazioni comparative. Questo vale anche se una delle pagine trovate dalla ricerca è in realtà la documentazione di un'altra funzione/metodo/hook correlato ma distinto (es. una variante più avanzata, o un'API citata come riferimento incrociato nella stessa documentazione): il suo estratto non è materiale da cui attingere fatti, sintassi o esempi per questo appunto, resta valido solo per l'eventuale accenno di una frase già previsto sopra.
 
-Nel campo "fonti" riporta solo ed esclusivamente URL presi da questo elenco (massimo 10). Non citare altre pagine anche se le conosci: se non compaiono in questo elenco non sono ammesse.${formattaFeedback(feedback)}`;
+Nel campo "fonti" riporta solo ed esclusivamente URL presi dall'elenco mostrato sopra (massimo 10). Non citare altre pagine anche se le conosci: se non compaiono in quell'elenco non sono ammesse.${formattaFeedback(feedback)}`;
 }
 
 function createGeneratorAgent({ model, searchTool, logger }) {
