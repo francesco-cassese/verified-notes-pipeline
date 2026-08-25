@@ -39,8 +39,8 @@ ${formattaFontiPerVerifica(risultatiRicerca)}
 
 ${buildIstruzioneLivelloIntroduttivo(argomento)}
 
-Una sezione lo viola se spiega/approfondisce per esteso uno dei punti sempre esclusi elencati sopra, invece di limitarsi al massimo a un accenno di una frase.
-3. COMPLETEZZA: mancano concetti CENTRALI per usare "${argomento}" al suo stesso livello introduttivo (es. la sintassi di base, un parametro essenziale, un caso d'uso comune)? L'assenza di uno qualsiasi dei punti sempre esclusi elencati sopra (funzioni/hook alternativi, tooling, comportamenti interni di dev/debug, ottimizzazioni, ecc.) NON è MAI una lacuna, anche se le fonti ne parlano diffusamente: non chiederne mai l'aggiunta.
+Una sezione lo viola se spiega/approfondisce per esteso un dettaglio che richiede un secondo concetto per essere capito (uno strumento diverso, un meccanismo interno, un caso limite, un'ottimizzazione), invece di limitarsi al massimo a un accenno di una frase o ometterlo del tutto.
+3. COMPLETEZZA: mancano concetti CENTRALI per usare "${argomento}" al suo stesso livello introduttivo (es. la sintassi di base, un parametro essenziale, un caso d'uso comune)? L'assenza di un dettaglio che il criterio sopra esclude (uno strumento diverso, un meccanismo interno, un caso limite, un'ottimizzazione) NON è MAI una lacuna, anche se le fonti ne parlano diffusamente: non chiederne mai l'aggiunta.
 
 Imposta "perimetro.approvato" a true SOLO se non ci sono problemi di perimetro, nessuna lacuna sui concetti centrali, né sezioni che violano il criterio di livello sopra. Se approvato è false, "perimetro.motivi" deve elencare in modo specifico e azionabile cosa correggere, un motivo per riga, massimo una frase ciascuno (es. "la sezione 'X' parla di Y, che non è pertinente a ${argomento}", oppure "manca la spiegazione di Z, un concetto centrale per questo argomento allo stesso livello", oppure "la sezione 'X' spiega a fondo Y, che rientra tra i punti sempre esclusi da un'introduzione: riducilo a un accenno o rimuovilo").
 

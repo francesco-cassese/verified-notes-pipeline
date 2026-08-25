@@ -89,11 +89,15 @@ const NoteSchema = NoteDraftSchema;
 const ReviewSchema = z.object({
     perimetro: z.object({
         approvato: z.boolean(),
-        motivi: z.array(z.string().min(1).max(500)).max(5),
+        // 800 e non 500: stesso motivo di ErroreComuneSchema.soluzione e
+        // keyTakeaways. Un motivo ben argomentato (specifico e azionabile,
+        // come richiesto nel prompt) eccede spesso 500 caratteri, causando lo
+        // stesso OutputParserException non recuperabile a metà revisione.
+        motivi: z.array(z.string().min(1).max(800)).max(5),
     }),
     aderenza: z.object({
         aderente: z.boolean(),
-        motivi: z.array(z.string().min(1).max(500)).max(5),
+        motivi: z.array(z.string().min(1).max(800)).max(5),
     }),
 });
 
