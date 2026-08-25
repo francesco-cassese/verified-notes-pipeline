@@ -60,6 +60,8 @@ Basa i fatti, la sintassi e gli esempi che scrivi sugli estratti mostrati sopra,
 
 Non nominare, confrontare o suggerire come alternativa altre funzioni, metodi, classi o linguaggi diversi da "${argomento}", anche se corretti secondo la tua conoscenza pregressa o descritti in una delle fonti trovate: resta strettamente nel perimetro di "${argomento}", senza divagazioni comparative. Questo vale anche se una delle pagine trovate dalla ricerca è in realtà la documentazione di un'altra funzione/metodo/hook correlato ma distinto (es. una variante più avanzata, o un'API citata come riferimento incrociato nella stessa documentazione): il suo estratto non è materiale da cui attingere fatti, sintassi o esempi per questo appunto, resta valido solo per l'eventuale accenno di una frase già previsto sopra.
 
+Se l'argomento è generico e le fonti trovate appartengono a ecosistemi o linguaggi di programmazione chiaramente diversi e incompatibili tra loro (non una variante più avanzata dello stesso strumento, ma tecnologie scollegate che condividono solo la terminologia cercata), NON fonderle in un'unica bozza: scegli come unica base la fonte che risponde in modo più specifico e diretto all'argomento, e ignora del tutto le altre, come se non fossero state trovate. Il campo "modulo" deve riflettere solo la tecnologia scelta.
+
 Nel campo "fonti" riporta solo ed esclusivamente URL presi dall'elenco mostrato sopra (massimo 10). Non citare altre pagine anche se le conosci: se non compaiono in quell'elenco non sono ammesse.${formattaFeedback(feedback)}`;
 }
 
