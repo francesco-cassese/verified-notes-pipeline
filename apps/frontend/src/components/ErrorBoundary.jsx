@@ -19,15 +19,27 @@ class ErrorBoundary extends Component {
         console.error("Errore non gestito nell'interfaccia:", error, info.componentStack);
     }
 
+    componentDidUpdate(prevProps) {
+        // Cambiare pagina (es. dalla Navbar) non rimonta questo boundary, quindi
+        // senza reset esplicito l'utente resterebbe bloccato sul fallback anche
+        // dopo aver navigato altrove.
+        if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+            this.setState({ error: null });
+        }
+    }
+
     render() {
         if (this.state.error) {
             return (
                 <main className="page">
                     <h1>Qualcosa è andato storto</h1>
                     <p className="subtitle">
-                        Si è verificato un errore imprevisto in questa pagina. Puoi provare a ricaricarla.
+                        Si è verificato un errore imprevisto in questa pagina. Puoi riprovare o tornare alla home.
                     </p>
                     <div className="error">{this.state.error.message || "Errore sconosciuto"}</div>
+                    <button type="button" onClick={() => this.setState({ error: null })}>
+                        Riprova
+                    </button>
                     <button type="button" onClick={() => window.location.assign("/")}>
                         Torna alla home
                     </button>

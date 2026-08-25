@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import Navbar from "./components/Navbar.jsx";
 import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import GeneratorPage from "./pages/GeneratorPage.jsx";
@@ -8,10 +8,12 @@ import NotePage from "./pages/NotePage.jsx";
 import NotFound from "./pages/NotFound.jsx";
 
 function App() {
+    const location = useLocation();
+
     return (
         <>
             <Navbar />
-            <ErrorBoundary>
+            <ErrorBoundary resetKey={location.pathname}>
                 <Routes>
                     <Route path="/" element={<GeneratorPage />} />
                     <Route path="/archive" element={<ArchivePage />} />
