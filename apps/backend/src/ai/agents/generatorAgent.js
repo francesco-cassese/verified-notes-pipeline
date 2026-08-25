@@ -65,6 +65,32 @@ Se l'argomento è generico e le fonti trovate appartengono a ecosistemi o lingua
 Nel campo "fonti" riporta solo ed esclusivamente URL presi dall'elenco mostrato sopra (massimo 10). Non citare altre pagine anche se le conosci: se non compaiono in quell'elenco non sono ammesse.${formattaFeedback(feedback)}`;
 }
 
+// Brave classifica i risultati anche in base alla lingua delle parole nella
+// query, non solo in base al suffisso "official documentation": per un
+// argomento scritto in italiano (es. "tipi di variabili in javascript"),
+// anche con quel suffisso Brave può restituire solo tutorial/blog italiani
+// in prima pagina, zero risultati su domini ufficiali, e la ricerca fallisce
+// con NO_OFFICIAL_SOURCE_ERROR nonostante la documentazione ufficiale esista.
+// Traducendo l'argomento in inglese prima di interrogare Brave si evita
+// questo bias linguistico. Se la traduzione fallisce (rete/quota), ripiega
+// sull'argomento originale: meglio tentare la ricerca nella lingua originale
+// che non cercare affatto.
+async function traduciPerRicerca(model, argomento, logger) {
+    try {
+        const risposta = await model.invoke(
+            `Traduci in inglese la seguente frase, che descrive un argomento di programmazione, restituendo SOLO la traduzione letterale, senza virgolettatura né altro testo: "${argomento}"`
+        );
+        const testo = typeof risposta.content === "string" ? risposta.content : risposta.content?.[0]?.text;
+        return testo?.trim() || argomento;
+    } catch (error) {
+        logger.warn("generatorAgent", "Traduzione della query di ricerca fallita, uso l'argomento originale", {
+            argomento,
+            errore: error.message,
+        });
+        return argomento;
+    }
+}
+
 function createGeneratorAgent({ model, searchTool, logger }) {
     async function generate(argomento, opts = {}) {
         const { feedback = [], onFase, risultatiRicercaCache } = opts;
@@ -84,7 +110,8 @@ function createGeneratorAgent({ model, searchTool, logger }) {
             onFase?.({ fase: "ricerca", messaggio: "Ricerca delle fonti ufficiali sul web..." });
 
             try {
-                const rawOutput = await searchTool.invoke({ query: argomento });
+                const queryRicerca = await traduciPerRicerca(model, argomento, logger);
+                const rawOutput = await searchTool.invoke({ query: queryRicerca });
                 const parsedOutput = JSON.parse(rawOutput);
                 risultatiRicerca = parsedOutput.dati_grezzi ?? [];
             } catch (error) {
