@@ -11,7 +11,13 @@ const EnvSchema = z.object({
     PORT: z.coerce.number().int().positive().default(3000),
     MODEL_NAME: z.string().default("claude-haiku-4-5"),
     NOTES_DIR: z.string().default("data/appunti"),
-    MAX_GENERATION_ATTEMPTS: z.coerce.number().int().positive().default(3),
+    // 5 e non 3: con argomenti la cui documentazione ufficiale intreccia molti
+    // concetti correlati (es. scope/durata/Shared in Visual Basic), il giudizio
+    // di perimetro del Reviewer resta in parte soggettivo e può oscillare da un
+    // tentativo all'altro; più tentativi aumentano le probabilità di successo
+    // senza allentare nessun controllo (costo extra solo sugli argomenti che
+    // già esaurirebbero i tentativi comunque).
+    MAX_GENERATION_ATTEMPTS: z.coerce.number().int().positive().default(5),
     MODEL_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
     SEARCH_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
     PAGE_FETCH_TIMEOUT_MS: z.coerce.number().int().positive().default(8_000),

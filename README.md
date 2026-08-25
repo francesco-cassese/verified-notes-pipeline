@@ -36,9 +36,9 @@ Cinque agenti specializzati, ognuno con un solo compito, coordinati da un orches
 | **Archivist** | deterministico | Mappa il modulo/tecnologia della nota su una cartella canonica tramite una tabella fissa, invece di usare alla lettera la dicitura dedotta dal modello — evita cartelle quasi-duplicate come `react/` vs `reactjs/`. |
 | **Writer** | deterministico | Formatta la bozza approvata secondo un template Markdown fisso (frontmatter, indice, sezioni, tabella errori comuni, fonti, key takeaways, glossario opzionale) e la scrive su disco insieme a un sidecar JSON con gli stessi dati strutturati. |
 
-L'**orchestratore** tiene insieme tutto: se un controllo fallisce, il motivo specifico torna in un nuovo tentativo di generazione (massimo 3), invece di far ripartire l'intera pipeline alla cieca. Non tutto è però retryabile: se non esiste alcuna fonte ufficiale per l'argomento, o se il salvataggio finale su disco fallisce, la pipeline si ferma subito invece di continuare a consumare chiamate al modello su un problema che ritentare non risolverebbe.
+L'**orchestratore** tiene insieme tutto: se un controllo fallisce, il motivo specifico torna in un nuovo tentativo di generazione (massimo 5), invece di far ripartire l'intera pipeline alla cieca. Non tutto è però retryabile: se non esiste alcuna fonte ufficiale per l'argomento, o se il salvataggio finale su disco fallisce, la pipeline si ferma subito invece di continuare a consumare chiamate al modello su un problema che ritentare non risolverebbe.
 
-Nel caso migliore una generazione richiede quindi 1 ricerca web + 2 chiamate LLM (Generator, Reviewer); nel caso peggiore (3 tentativi, sempre respinta) al massimo 1 ricerca + 6 chiamate LLM, non 9: la ricerca gira una sola volta per argomento e Reviewer sostituisce due chiamate separate con una.
+Nel caso migliore una generazione richiede quindi 1 ricerca web + 2 chiamate LLM (Generator, Reviewer); nel caso peggiore (5 tentativi, sempre respinta) al massimo 1 ricerca + 10 chiamate LLM: la ricerca gira una sola volta per argomento e Reviewer sostituisce due chiamate separate con una.
 
 L'avanzamento viene trasmesso al frontend via Server-Sent Events man mano che ogni fase viene eseguita, dato che una generazione completa può richiedere diverse chiamate LLM in sequenza.
 
