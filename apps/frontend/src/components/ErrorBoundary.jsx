@@ -8,26 +8,26 @@ import { Component } from "react";
 class ErrorBoundary extends Component {
     constructor(props) {
         super(props);
-        this.state = { errore: null };
+        this.state = { error: null };
     }
 
-    static getDerivedStateFromError(errore) {
-        return { errore };
+    static getDerivedStateFromError(error) {
+        return { error };
     }
 
-    componentDidCatch(errore, info) {
-        console.error("Errore non gestito nell'interfaccia:", errore, info.componentStack);
+    componentDidCatch(error, info) {
+        console.error("Errore non gestito nell'interfaccia:", error, info.componentStack);
     }
 
     render() {
-        if (this.state.errore) {
+        if (this.state.error) {
             return (
                 <main className="page">
                     <h1>Qualcosa è andato storto</h1>
                     <p className="subtitle">
                         Si è verificato un errore imprevisto in questa pagina. Puoi provare a ricaricarla.
                     </p>
-                    <div className="error">{this.state.errore.message || "Errore sconosciuto"}</div>
+                    <div className="error">{this.state.error.message || "Errore sconosciuto"}</div>
                     <button type="button" onClick={() => window.location.assign("/")}>
                         Torna alla home
                     </button>

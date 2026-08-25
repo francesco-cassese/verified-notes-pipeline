@@ -6,7 +6,7 @@ import styles from "./Navbar.module.css";
 // combacia con nessuna classe locale hashata, quindi scegliamo esplicitamente
 // styles.navLink/styles.navLinkActive invece di affidarci al nome che
 // aggiunge il router.
-function classeLink({ isActive }) {
+function linkClassName({ isActive }) {
     return isActive ? `${styles.navLink} ${styles.navLinkActive}` : styles.navLink;
 }
 
@@ -18,8 +18,8 @@ function Navbar() {
                     📚 Appunti Tecnici
                 </NavLink>
                 <nav className={styles.navbarLinks}>
-                    <NavLink to="/" end className={classeLink}>Genera</NavLink>
-                    <NavLink to="/archivio" className={classeLink}>Archivio</NavLink>
+                    <NavLink to="/" end className={linkClassName}>Genera</NavLink>
+                    <NavLink to="/archive" className={linkClassName}>Archivio</NavLink>
                 </nav>
             </div>
         </header>

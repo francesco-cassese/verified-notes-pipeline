@@ -1,47 +1,47 @@
 import { slugify } from "../utils/slugify.js";
-import { infoFonte } from "../utils/sourceCatalog.js";
+import { sourceInfo } from "../utils/sourceCatalog.js";
 import MarkdownViewer from "./MarkdownViewer.jsx";
-import styles from "./Nota.module.css";
+import styles from "./Note.module.css";
 
 // Estrae i sottotitoli (### ...) dal markdown di una sezione, per mostrarli
 // come voci annidate 1.1/1.2 nell'indice: ignora quelli dentro un blocco di
 // codice (una riga tipo "### commento" in un esempio non è un sottotitolo) e
 // non cattura per errore un h4 "####", che inizia comunque con "###".
-function estraiSottotitoli(markdown) {
-    const sottotitoli = [];
-    let dentroBlocco = false;
-    for (const riga of markdown.split("\n")) {
-        if (/^```/.test(riga.trim())) {
-            dentroBlocco = !dentroBlocco;
+function extractSubheadings(markdown) {
+    const subheadings = [];
+    let inCodeBlock = false;
+    for (const line of markdown.split("\n")) {
+        if (/^```/.test(line.trim())) {
+            inCodeBlock = !inCodeBlock;
             continue;
         }
-        if (dentroBlocco) continue;
-        const match = riga.match(/^###\s+(.+)$/);
-        if (match) sottotitoli.push(match[1].trim());
+        if (inCodeBlock) continue;
+        const match = line.match(/^###\s+(.+)$/);
+        if (match) subheadings.push(match[1].trim());
     }
-    return sottotitoli;
+    return subheadings;
 }
 
-function Nota({ nota, tentativi }) {
-    const tag = nota.tag || [];
-    const sezioni = nota.sezioni || [];
-    const fonti = nota.fonti || [];
-    const glossario = nota.glossario || [];
-    const keyTakeaways = nota.keyTakeaways || [];
-    const erroriComuni = nota.erroriComuni || [];
+function Note({ note, attempts }) {
+    const tags = note.tags || [];
+    const sections = note.sections || [];
+    const sources = note.sources || [];
+    const glossary = note.glossary || [];
+    const keyTakeaways = note.keyTakeaways || [];
+    const commonMistakes = note.commonMistakes || [];
 
     return (
         <article className="note">
-            <span className="moduleBadge">{nota.modulo || ""}</span>
-            <h2>{nota.titolo || nota.argomento}</h2>
+            <span className="moduleBadge">{note.module || ""}</span>
+            <h2>{note.title || note.topic}</h2>
             <div className="meta">
-                {tentativi && <>Generato in {tentativi} tentativo{tentativi > 1 ? "i" : ""} &middot; </>}
-                {new Date(nota.creatoIl).toLocaleString("it-IT")}
+                {attempts && <>Generato in {attempts} tentativo{attempts > 1 ? "i" : ""} &middot; </>}
+                {new Date(note.createdAt).toLocaleString("it-IT")}
             </div>
 
-            {tag.length > 0 && (
+            {tags.length > 0 && (
                 <div className={styles.tagList}>
-                    {tag.map((t) => (
+                    {tags.map((t) => (
                         <span className={styles.tag} key={t}>{t}</span>
                     ))}
                 </div>
@@ -50,14 +50,14 @@ function Nota({ nota, tentativi }) {
             <nav className={styles.tableOfContents}>
                 <h3>📍 Indice Rapido</h3>
                 <ol>
-                    {sezioni.map((s, i) => {
-                        const sottotitoli = estraiSottotitoli(s.contenuto);
+                    {sections.map((s, i) => {
+                        const subheadings = extractSubheadings(s.content);
                         return (
-                            <li key={s.titolo}>
-                                <a href={`#${slugify(s.titolo)}`}>{s.titolo}</a>
-                                {sottotitoli.length > 0 && (
+                            <li key={s.title}>
+                                <a href={`#${slugify(s.title)}`}>{s.title}</a>
+                                {subheadings.length > 0 && (
                                     <ol className={styles.tableOfContentsSubList}>
-                                        {sottotitoli.map((sub, j) => (
+                                        {subheadings.map((sub, j) => (
                                             <li key={sub}>{i + 1}.{j + 1} {sub}</li>
                                         ))}
                                     </ol>
@@ -68,15 +68,15 @@ function Nota({ nota, tentativi }) {
                     <li><a href="#errori-comuni">Errori Comuni</a></li>
                     <li><a href="#risorse">Risorse e Documentazione</a></li>
                     <li><a href="#takeaways">Key Takeaways</a></li>
-                    {glossario.length > 0 && <li><a href="#glossario">Glossario</a></li>}
+                    {glossary.length > 0 && <li><a href="#glossario">Glossario</a></li>}
                 </ol>
             </nav>
 
-            {sezioni.map((s, i) => (
-                <section className={styles.section} id={slugify(s.titolo)} key={s.titolo}>
-                    <h3>{i + 1}. {s.titolo}</h3>
+            {sections.map((s, i) => (
+                <section className={styles.section} id={slugify(s.title)} key={s.title}>
+                    <h3>{i + 1}. {s.title}</h3>
                     <div className={styles.sectionContent}>
-                        <MarkdownViewer markdown={s.contenuto} sectionNumber={i + 1} senzaMargineSuperiore />
+                        <MarkdownViewer markdown={s.content} sectionNumber={i + 1} noTopMargin />
                     </div>
                 </section>
             ))}
@@ -91,10 +91,10 @@ function Nota({ nota, tentativi }) {
                         </tr>
                     </thead>
                     <tbody>
-                        {erroriComuni.map((e) => (
-                            <tr key={e.errore}>
-                                <td>{e.errore}</td>
-                                <td>{e.soluzione}</td>
+                        {commonMistakes.map((m) => (
+                            <tr key={m.mistake}>
+                                <td>{m.mistake}</td>
+                                <td>{m.solution}</td>
                             </tr>
                         ))}
                     </tbody>
@@ -103,15 +103,15 @@ function Nota({ nota, tentativi }) {
 
             <section className={styles.sources} id="risorse">
                 <h3>🔗 Risorse e Documentazione</h3>
-                {fonti.length > 0 ? (
+                {sources.length > 0 ? (
                     <ul>
-                        {fonti.map((f) => {
-                            const { emoji, etichetta } = infoFonte(f.url);
+                        {sources.map((s) => {
+                            const { emoji, label } = sourceInfo(s.url);
                             return (
-                                <li key={f.url}>
-                                    {emoji} <strong>{etichetta}:</strong>{" "}
-                                    <a href={f.url} target="_blank" rel="noopener noreferrer">
-                                        {f.titolo || f.url}
+                                <li key={s.url}>
+                                    {emoji} <strong>{label}:</strong>{" "}
+                                    <a href={s.url} target="_blank" rel="noopener noreferrer">
+                                        {s.title || s.url}
                                     </a>
                                 </li>
                             );
@@ -132,7 +132,7 @@ function Nota({ nota, tentativi }) {
                 </ul>
             </section>
 
-            {glossario.length > 0 && (
+            {glossary.length > 0 && (
                 <section className={styles.glossary} id="glossario">
                     <h3>📖 Glossario</h3>
                     <p className={styles.sectionSubtitle}>Termini tecnici spiegati in modo semplice, a fianco della definizione formale.</p>
@@ -145,11 +145,11 @@ function Nota({ nota, tentativi }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {glossario.map((v) => (
-                                <tr key={v.termine}>
-                                    <td>{v.termine}</td>
-                                    <td>{v.definizioneFormale}</td>
-                                    <td>{v.spiegazioneInformale}</td>
+                            {glossary.map((g) => (
+                                <tr key={g.term}>
+                                    <td>{g.term}</td>
+                                    <td>{g.formalDefinition}</td>
+                                    <td>{g.informalExplanation}</td>
                                 </tr>
                             ))}
                         </tbody>
@@ -157,9 +157,9 @@ function Nota({ nota, tentativi }) {
                 </section>
             )}
 
-            <div className={styles.fileName}>Salvato come {nota.percorsoRelativo || nota.nomeFile}</div>
+            <div className={styles.fileName}>Salvato come {note.relativePath || note.fileName}</div>
         </article>
     );
 }
 
-export default Nota;
+export default Note;

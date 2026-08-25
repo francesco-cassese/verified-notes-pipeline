@@ -1,8 +1,18 @@
+/*
+    RESET CSS
+    =============================
+*/
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
 }
+
+/*
+    VARIABILI
+    =============================
+*/
 
 :root {
     color-scheme: light dark;
@@ -29,6 +39,11 @@
     --navbar-height: 3.5rem;
 }
 
+/*
+    ELEMENTI BASE
+    =============================
+*/
+
 html {
     font-size: 100%;
 }
@@ -45,17 +60,15 @@ a {
     color: inherit;
 }
 
-img, svg {
+img,
+svg {
     max-width: 100%;
 }
 
-/* --- Base tipografica e controlli di form, condivisi da tutta l'app ---
-   Selettori su elemento (non su classe): restano qui invece che in un CSS
-   module perché i CSS module scopano solo classi/id. Un "button {}" scritto
-   dentro un .module.css verrebbe rinominato in una classe locale e smetterebbe
-   di applicarsi automaticamente a ogni <button>: qui invece serve proprio
-   questo, un default valido ovunque senza dover aggiungere una className a
-   ogni bottone/input/form della app. */
+/*
+    TIPOGRAFIA
+    =============================
+*/
 
 h1 {
     font-size: 1.9rem;
@@ -67,6 +80,17 @@ h1 {
         font-size: 1.5rem;
     }
 }
+
+/*
+    FORM
+    =============================
+    Selettori su elemento (non su classe): restano qui invece che in un CSS
+    module perché i CSS module scopano solo classi/id. Un "button {}" scritto
+    dentro un .module.css verrebbe rinominato in una classe locale e
+    smetterebbe di applicarsi automaticamente a ogni <button>: qui invece
+    serve proprio questo, un default valido ovunque senza dover aggiungere
+    una className a ogni bottone/input/form della app.
+*/
 
 form {
     display: flex;
@@ -113,13 +137,13 @@ button:disabled {
     cursor: not-allowed;
 }
 
-/* --- Classi condivise da più pagine/componenti ---
-   Restano classi globali (non CSS module) perché nessun singolo componente
-   le possiede: .page/.subtitle/.generationStatus/.error/.breadcrumb sono
-   usate da quasi ogni pagina, .note/.moduleBadge/.meta dalla card di una
-   nota sia nella vista strutturata (Nota.jsx) sia nel fallback markdown
-   (ArchivioDettaglio.jsx). Le classi specifiche di un solo componente restano
-   invece nel suo *.module.css. */
+/*
+    LAYOUT DI PAGINA
+    =============================
+    Classe globale (non CSS module) perché la usa quasi ogni pagina: nessun
+    singolo componente la possiede. Le classi specifiche di una sola pagina
+    o di un solo componente restano invece nel suo *.module.css.
+*/
 
 .page {
     width: 100%;
@@ -133,6 +157,14 @@ button:disabled {
         padding: 1.5rem 1rem 3rem;
     }
 }
+
+/*
+    MESSAGGI DI STATO
+    =============================
+    Come .page, condivise da quasi ogni pagina (sottotitolo della pagina,
+    stato di caricamento/generazione, messaggio di errore, link per tornare
+    indietro): restano globali per lo stesso motivo.
+*/
 
 .subtitle {
     color: var(--muted);
@@ -169,6 +201,15 @@ button:disabled {
 .breadcrumb:hover {
     text-decoration: underline;
 }
+
+/*
+    CARD NOTA
+    =============================
+    Struttura esterna condivisa dalla card di una nota, sia nella vista
+    strutturata (Nota.jsx) sia nel fallback markdown (ArchivioDettaglio.jsx):
+    due componenti diversi, stessa card, quindi resta globale invece che nel
+    .module.css di uno solo dei due.
+*/
 
 .note {
     background: var(--surface);

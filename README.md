@@ -40,7 +40,7 @@ L'**orchestratore** tiene insieme tutto: se un controllo fallisce, il motivo spe
 
 Nel caso migliore una generazione richiede quindi 1 ricerca web + 2 chiamate LLM (Generator, Reviewer); nel caso peggiore (3 tentativi, sempre respinta) al massimo 1 ricerca + 6 chiamate LLM: la ricerca gira una sola volta per argomento e Reviewer sostituisce due chiamate separate con una.
 
-Prima ancora di avviare la pipeline, il controller confronta l'argomento richiesto con quelli già salvati in archivio (case-insensitive): se un appunto per lo stesso argomento esiste già, restituisce subito un evento `duplicato` con il riferimento all'appunto esistente, a costo zero (nessuna ricerca, nessuna chiamata LLM).
+Prima ancora di avviare la pipeline, il controller confronta l'argomento richiesto con quelli già salvati in archivio (case-insensitive): se un appunto per lo stesso argomento esiste già, restituisce subito un evento `duplicate` con il riferimento all'appunto esistente, a costo zero (nessuna ricerca, nessuna chiamata LLM).
 
 L'avanzamento viene trasmesso al frontend via Server-Sent Events man mano che ogni fase viene eseguita, dato che una generazione completa può richiedere diverse chiamate LLM in sequenza.
 
@@ -49,7 +49,7 @@ L'avanzamento viene trasmesso al frontend via Server-Sent Events man mano che og
 - **Protezione da path traversal** — titoli e nomi di modulo vengono trasformati in slug tramite una whitelist rigida (solo `[a-z0-9-]`), e ogni percorso file risolto viene verificato per contenimento dentro la directory degli appunti prima di ogni lettura o scrittura.
 - **Protezione SSRF senza finestra DNS-rebinding** — le pagine delle fonti recuperate sono limitate a una whitelist curata di domini ufficiali e ricontrollate dopo eventuali redirect. La validazione "l'IP non è privato" avviene nello stesso identico lookup DNS usato per aprire davvero la connessione (un `Agent` undici con `connect.lookup` custom), non in un controllo separato fatto prima: così un dominio con TTL bassissimo non può rispondere un IP pubblico al controllo e uno privato alla richiesta reale.
 - **Validazione di appartenenza delle fonti** — superare la whitelist di dominio non basta: il Validator verifica anche che l'URL citato sia esattamente uno di quelli restituiti dalla ricerca per quel tentativo, così un URL plausibile ma inventato su un dominio comunque ufficiale viene comunque respinto.
-- **Rate limiting sulla generazione** — `POST /api/appunti` è l'unico endpoint che costa (fino a `maxAttempts` chiamate LLM + ricerca in sequenza): è limitato per IP (default 5 richieste ogni 15 minuti, configurabile) per evitare che chiunque lo raggiunga possa consumare la quota Anthropic/Brave a piacere. Gli endpoint di lettura dell'archivio non hanno limiti, sono solo accessi al filesystem.
+- **Rate limiting sulla generazione** — `POST /api/notes` è l'unico endpoint che costa (fino a `maxAttempts` chiamate LLM + ricerca in sequenza): è limitato per IP (default 5 richieste ogni 15 minuti, configurabile) per evitare che chiunque lo raggiunga possa consumare la quota Anthropic/Brave a piacere. Gli endpoint di lettura dell'archivio non hanno limiti, sono solo accessi al filesystem.
 
 ## Stack tecnologico
 
@@ -101,10 +101,10 @@ In produzione, `pnpm build` compila il frontend dentro `apps/backend/public`, e 
 
 | Metodo | Percorso | Descrizione |
 |---|---|---|
-| `POST` | `/api/appunti` | Genera un appunto per un argomento; trasmette l'avanzamento della pipeline come Server-Sent Events, terminando con un evento `risultato` (`successo`, `errore`, o `duplicato` se l'argomento è già in archivio — in quel caso la pipeline non viene nemmeno avviata). |
-| `GET` | `/api/appunti/cartelle` | Elenca le cartelle modulo/tecnologia con il conteggio degli appunti. |
-| `GET` | `/api/appunti/cartelle/:cartella` | Elenca gli appunti in una cartella. |
-| `GET` | `/api/appunti/cartelle/:cartella/:nomeFile` | Legge un singolo appunto. |
+| `POST` | `/api/notes` | Genera un appunto per un argomento; trasmette l'avanzamento della pipeline come Server-Sent Events, terminando con un evento `result` (`success`, `error`, o `duplicate` se l'argomento è già in archivio — in quel caso la pipeline non viene nemmeno avviata). |
+| `GET` | `/api/notes/folders` | Elenca le cartelle modulo/tecnologia con il conteggio degli appunti. |
+| `GET` | `/api/notes/folders/:folder` | Elenca gli appunti in una cartella. |
+| `GET` | `/api/notes/folders/:folder/:fileName` | Legge un singolo appunto. |
 
 ## Test
 

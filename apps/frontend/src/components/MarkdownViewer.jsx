@@ -3,7 +3,7 @@ import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import styles from "./MarkdownViewer.module.css";
 
-// Con sectionNumber impostato (solo dentro una sezione numerata di Nota.jsx),
+// Con sectionNumber impostato (solo dentro una sezione numerata di Note.jsx),
 // prefissa i sottotitoli con la numerazione gerarchica del template (1.1,
 // 1.1.2, ...). rehype-slug ha già assegnato l'id all'header in base al testo
 // originale prima che arrivi qui: aggiungere solo il prefisso visivo al testo
@@ -27,13 +27,13 @@ function buildHeadingComponents(sectionNumber) {
     };
 }
 
-function MarkdownViewer({ markdown, sectionNumber, senzaMargineSuperiore }) {
-    const classi = senzaMargineSuperiore
+function MarkdownViewer({ markdown, sectionNumber, noTopMargin }) {
+    const combinedClassName = noTopMargin
         ? `${styles.markdownViewer} ${styles.noTopMargin}`
         : styles.markdownViewer;
 
     return (
-        <div className={classi}>
+        <div className={combinedClassName}>
             <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeSlug]}
