@@ -3,6 +3,8 @@ node_modules
 apps/backend/data/appunti
 apps/backend/public
 apps/frontend/dist
+output
+recordings
 
 # Logs
 logs
