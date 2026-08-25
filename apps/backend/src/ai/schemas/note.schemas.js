@@ -27,10 +27,16 @@ const SezioneSchema = z.object({
 // per fissare in memoria i termini tecnici più ostici, non solo la definizione
 // da manuale. Il glossario resta facoltativo: non tutti gli argomenti hanno
 // gergo tecnico che vale la pena isolare a parte.
+// 450 e non 300 per lo stesso motivo di ErroreComuneSchema.soluzione più sotto:
+// una definizione o spiegazione completa eccede spesso 300 caratteri in
+// pratica, causando un OutputParserException non recuperabile a metà
+// generazione. Bumpato preventivamente insieme a "errore" e "soluzione" (tutti
+// e tre campi di testo descrittivo con lo stesso profilo di rischio) invece
+// di aspettare che fallisca anche questo con un'altra chiamata reale.
 const GlossarioVoceSchema = z.object({
     termine: z.string().min(1).max(80),
-    definizioneFormale: z.string().min(1).max(300),
-    spiegazioneInformale: z.string().min(1).max(300),
+    definizioneFormale: z.string().min(1).max(450),
+    spiegazioneInformale: z.string().min(1).max(450),
 });
 
 // Errori tipici in cui incorre chi impronta questo argomento per la prima
@@ -38,7 +44,9 @@ const GlossarioVoceSchema = z.object({
 // isolano gli sbagli pratici più comuni e come correggerli, in modo che
 // restino facili da ritrovare invece di essere sparsi dentro il contenuto.
 const ErroreComuneSchema = z.object({
-    errore: z.string().min(1).max(200),
+    // 350 e non 200: stesso motivo di "soluzione" sotto, osservato in pratica
+    // (4 violazioni nello stesso tentativo su un solo argomento).
+    errore: z.string().min(1).max(350),
     // 500 e non 300: il modello scrive spesso soluzioni pratiche con un
     // controesempio (es. "usa X invece di Y"), e 300 caratteri si sono
     // rivelati troppo stretti nella pratica, causando un OutputParserException
