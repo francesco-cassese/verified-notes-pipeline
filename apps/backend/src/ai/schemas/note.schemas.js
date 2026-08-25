@@ -86,6 +86,17 @@ const NoteSchema = NoteDraftSchema;
 // prompt) senza annacquare nessuno dei due controlli, che restano verdetti
 // indipendenti con i propri motivi. "motivi" è vuoto/non significativo se il
 // relativo verdetto è positivo.
+// Niente `.max(5)` sugli array di motivi: reviewerAgent chiama il modello con
+// `strict: true` (structured output vincolato lato Anthropic, non solo
+// validato lato client), che garantisce tipi e campi corretti così il
+// Reviewer non può più restituire "perimetro" come stringa invece che come
+// oggetto o omettere "aderenza" del tutto — il crash osservato in pratica su
+// argomenti su cui il Reviewer aveva molto da segnalare. La modalità strict
+// di Anthropic però rifiuta la richiesta se lo schema contiene `maxItems` su
+// un array (verificato con una chiamata reale: 400 "property 'maxItems' is
+// not supported"); `maxLength` sulle stringhe invece è supportato, quindi
+// resta solo lì. Il numero di motivi restava comunque implicitamente limitato
+// dal prompt ("un motivo per riga"), qui perdiamo solo il tetto rigido.
 const ReviewSchema = z.object({
     perimetro: z.object({
         approvato: z.boolean(),
@@ -93,11 +104,11 @@ const ReviewSchema = z.object({
         // keyTakeaways. Un motivo ben argomentato (specifico e azionabile,
         // come richiesto nel prompt) eccede spesso 500 caratteri, causando lo
         // stesso OutputParserException non recuperabile a metà revisione.
-        motivi: z.array(z.string().min(1).max(800)).max(5),
+        motivi: z.array(z.string().min(1).max(800)),
     }),
     aderenza: z.object({
         aderente: z.boolean(),
-        motivi: z.array(z.string().min(1).max(800)).max(5),
+        motivi: z.array(z.string().min(1).max(800)),
     }),
 });
 

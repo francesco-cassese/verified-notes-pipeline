@@ -63,7 +63,11 @@ Imposta "aderenza.aderente" a true se ogni fatto, sintassi o esempio specifico n
 function createReviewerAgent({ model, logger }) {
     async function review(argomento, draft, risultatiRicerca) {
         try {
-            const modelloStrutturato = model.withStructuredOutput(ReviewSchema);
+            // strict: true vincola la generazione lato Anthropic (non solo la
+            // validazione lato client): il modello non può produrre un tipo
+            // sbagliato o omettere un campo richiesto, eliminando il crash di
+            // parsing osservato quando il Reviewer aveva molto da segnalare.
+            const modelloStrutturato = model.withStructuredOutput(ReviewSchema, { strict: true });
             const verdetto = await modelloStrutturato.invoke(
                 buildPromptRevisione(argomento, draft, risultatiRicerca)
             );
