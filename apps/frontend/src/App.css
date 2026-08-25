@@ -376,6 +376,14 @@ button:disabled {
     color: var(--accent);
 }
 
+.indice-sotto {
+    list-style: none;
+    margin: 0.2rem 0 0.3rem;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: 0.9rem;
+}
+
 .sezione {
     border-top: 1px solid var(--border);
     padding-top: 1.25rem;
@@ -408,6 +416,13 @@ button:disabled {
 .fonti h3, .takeaways h3, .glossario h3 {
     margin: 0 0 0.6rem;
     font-size: 1.15rem;
+}
+
+.sezione-sottotitolo {
+    color: var(--muted);
+    font-style: italic;
+    font-size: 0.9rem;
+    margin: -0.2rem 0 0.8rem;
 }
 
 .fonti ul, .takeaways ul {

@@ -1,5 +1,25 @@
 import { slugify } from "../utils/slugify.js";
+import { infoFonte } from "../utils/sourceCatalog.js";
 import MarkdownViewer from "./MarkdownViewer.jsx";
+
+// Estrae i sottotitoli (### ...) dal markdown di una sezione, per mostrarli
+// come voci annidate 1.1/1.2 nell'indice: ignora quelli dentro un blocco di
+// codice (una riga tipo "### commento" in un esempio non è un sottotitolo) e
+// non cattura per errore un h4 "####", che inizia comunque con "###".
+function estraiSottotitoli(markdown) {
+    const sottotitoli = [];
+    let dentroBlocco = false;
+    for (const riga of markdown.split("\n")) {
+        if (/^```/.test(riga.trim())) {
+            dentroBlocco = !dentroBlocco;
+            continue;
+        }
+        if (dentroBlocco) continue;
+        const match = riga.match(/^###\s+(.+)$/);
+        if (match) sottotitoli.push(match[1].trim());
+    }
+    return sottotitoli;
+}
 
 function Nota({ nota, tentativi }) {
     const tag = nota.tag || [];
@@ -29,11 +49,21 @@ function Nota({ nota, tentativi }) {
             <nav className="indice">
                 <h3>📍 Indice Rapido</h3>
                 <ol>
-                    {sezioni.map((s) => (
-                        <li key={s.titolo}>
-                            <a href={`#${slugify(s.titolo)}`}>{s.titolo}</a>
-                        </li>
-                    ))}
+                    {sezioni.map((s, i) => {
+                        const sottotitoli = estraiSottotitoli(s.contenuto);
+                        return (
+                            <li key={s.titolo}>
+                                <a href={`#${slugify(s.titolo)}`}>{s.titolo}</a>
+                                {sottotitoli.length > 0 && (
+                                    <ol className="indice-sotto">
+                                        {sottotitoli.map((sub, j) => (
+                                            <li key={sub}>{i + 1}.{j + 1} {sub}</li>
+                                        ))}
+                                    </ol>
+                                )}
+                            </li>
+                        );
+                    })}
                     <li><a href="#errori-comuni">Errori Comuni</a></li>
                     <li><a href="#risorse">Risorse e Documentazione</a></li>
                     <li><a href="#takeaways">Key Takeaways</a></li>
@@ -41,11 +71,11 @@ function Nota({ nota, tentativi }) {
                 </ol>
             </nav>
 
-            {sezioni.map((s) => (
+            {sezioni.map((s, i) => (
                 <section className="sezione" id={slugify(s.titolo)} key={s.titolo}>
-                    <h3>{s.titolo}</h3>
+                    <h3>{i + 1}. {s.titolo}</h3>
                     <div className="sezione-contenuto">
-                        <MarkdownViewer markdown={s.contenuto} />
+                        <MarkdownViewer markdown={s.contenuto} sectionNumber={i + 1} />
                     </div>
                 </section>
             ))}
@@ -74,13 +104,17 @@ function Nota({ nota, tentativi }) {
                 <h3>🔗 Risorse e Documentazione</h3>
                 {fonti.length > 0 ? (
                     <ul>
-                        {fonti.map((f) => (
-                            <li key={f.url}>
-                                <a href={f.url} target="_blank" rel="noopener noreferrer">
-                                    {f.titolo || f.url}
-                                </a>
-                            </li>
-                        ))}
+                        {fonti.map((f) => {
+                            const { emoji, etichetta } = infoFonte(f.url);
+                            return (
+                                <li key={f.url}>
+                                    {emoji} <strong>{etichetta}:</strong>{" "}
+                                    <a href={f.url} target="_blank" rel="noopener noreferrer">
+                                        {f.titolo || f.url}
+                                    </a>
+                                </li>
+                            );
+                        })}
                     </ul>
                 ) : (
                     <p>Nessuna fonte ufficiale citata.</p>
@@ -89,6 +123,7 @@ function Nota({ nota, tentativi }) {
 
             <section className="takeaways" id="takeaways">
                 <h3>🚀 Key Takeaways</h3>
+                <p className="sezione-sottotitolo">I punti fondamentali da ricordare.</p>
                 <ul>
                     {keyTakeaways.map((k) => (
                         <li key={k}>{k}</li>
@@ -99,6 +134,7 @@ function Nota({ nota, tentativi }) {
             {glossario.length > 0 && (
                 <section className="glossario" id="glossario">
                     <h3>📖 Glossario</h3>
+                    <p className="sezione-sottotitolo">Termini tecnici spiegati in modo semplice, a fianco della definizione formale.</p>
                     <table>
                         <thead>
                             <tr>
