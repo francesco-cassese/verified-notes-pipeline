@@ -13,10 +13,11 @@ const draftMinimo = {
 
 const risultatiRicercaMinimi = [{ title: "React Docs", url: "https://react.dev/learn/hooks", contenuto: "I hook sono funzioni speciali." }];
 
-test("review: verdetto con entrambi gli aspetti approvati restituito così com'è", async () => {
+test("review: verdetto con tutti gli aspetti approvati restituito così com'è", async () => {
     const verdettoFinto = {
         perimetro: { approvato: true, motivi: [] },
         aderenza: { aderente: true, motivi: [] },
+        bestPractice: { aggiornato: true, motivi: [] },
     };
     const model = { withStructuredOutput: () => ({ invoke: async () => verdettoFinto }) };
     const reviewer = createReviewerAgent({ model, logger: loggerSilenzioso });
@@ -30,6 +31,7 @@ test("review: perimetro non approvato restituito con i motivi", async () => {
     const verdettoFinto = {
         perimetro: { approvato: false, motivi: ["la sezione 'Cos'è un hook' spiega a fondo il reconciler, fuori perimetro"] },
         aderenza: { aderente: true, motivi: [] },
+        bestPractice: { aggiornato: true, motivi: [] },
     };
     const model = { withStructuredOutput: () => ({ invoke: async () => verdettoFinto }) };
     const reviewer = createReviewerAgent({ model, logger: loggerSilenzioso });
@@ -44,6 +46,7 @@ test("review: aderenza non superata restituita con i motivi", async () => {
     const verdettoFinto = {
         perimetro: { approvato: true, motivi: [] },
         aderenza: { aderente: false, motivi: ["la sezione 'Cos'è un hook' descrive un'API non presente negli estratti"] },
+        bestPractice: { aggiornato: true, motivi: [] },
     };
     const model = { withStructuredOutput: () => ({ invoke: async () => verdettoFinto }) };
     const reviewer = createReviewerAgent({ model, logger: loggerSilenzioso });
@@ -52,6 +55,21 @@ test("review: aderenza non superata restituita con i motivi", async () => {
 
     assert.equal(risultato.aderenza.aderente, false);
     assert.deepEqual(risultato.aderenza.motivi, verdettoFinto.aderenza.motivi);
+});
+
+test("review: best practice non rispettata restituita con i motivi", async () => {
+    const verdettoFinto = {
+        perimetro: { approvato: true, motivi: [] },
+        aderenza: { aderente: true, motivi: [] },
+        bestPractice: { aggiornato: false, motivi: ["la sezione 'Cos'è un hook' mostra componentWillMount, che le fonti segnalano come deprecato in favore di useEffect"] },
+    };
+    const model = { withStructuredOutput: () => ({ invoke: async () => verdettoFinto }) };
+    const reviewer = createReviewerAgent({ model, logger: loggerSilenzioso });
+
+    const risultato = await reviewer.review("hooks react", draftMinimo, risultatiRicercaMinimi);
+
+    assert.equal(risultato.bestPractice.aggiornato, false);
+    assert.deepEqual(risultato.bestPractice.motivi, verdettoFinto.bestPractice.motivi);
 });
 
 test("review: errore del modello viene incapsulato in GENERATION_ERROR con causa", async () => {

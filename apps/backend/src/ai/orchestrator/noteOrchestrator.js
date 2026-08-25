@@ -78,15 +78,17 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
             }
 
             // Conformità strutturale OK: passa alla revisione semantica, che in
-            // un'unica chiamata LLM valuta sia il perimetro/livello (la bozza
-            // resta in tema e al livello giusto) sia l'aderenza alle fonti (i
-            // fatti scritti vengono dagli estratti, non dalla memoria del
-            // modello: il Validatore verifica solo che gli URL citati siano
-            // reali, non che il testo generato sia fedele al loro contenuto).
-            // I due giudizi restano indipendenti nello schema e nel prompt, solo
-            // la chiamata è unica: dimezza i token di contesto (bozza+fonti
-            // incollate una volta sola) rispetto a due chiamate separate.
-            emettiFase({ fase: "revisione", messaggio: "Controllo del contenuto, del livello e delle fonti..." });
+            // un'unica chiamata LLM valuta il perimetro/livello (la bozza resta
+            // in tema e non è troppo approfondita per un'introduzione),
+            // l'aderenza alle fonti (i fatti scritti vengono dagli estratti, non
+            // dalla memoria del modello: il Validatore verifica solo che gli URL
+            // citati siano reali, non che il testo generato sia fedele al loro
+            // contenuto) e le best practice (niente pattern che le fonti stesse
+            // segnalano come superati). I tre giudizi restano indipendenti nello
+            // schema e nel prompt, solo la chiamata è unica: dimezza i token di
+            // contesto (bozza+fonti incollate una volta sola) rispetto a chiamate
+            // separate.
+            emettiFase({ fase: "revisione", messaggio: "Controllo del contenuto, del livello, delle fonti e delle best practice..." });
             let esitoRevisione;
             try {
                 esitoRevisione = await reviewer.review(argomento, result.data, risultatiRicerca);
@@ -113,9 +115,10 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
 
             const problemiPerimetro = esitoRevisione.perimetro.approvato ? [] : esitoRevisione.perimetro.motivi;
             const problemiAderenza = esitoRevisione.aderenza.aderente ? [] : esitoRevisione.aderenza.motivi;
+            const problemiBestPractice = esitoRevisione.bestPractice.aggiornato ? [] : esitoRevisione.bestPractice.motivi;
 
-            if (problemiPerimetro.length > 0 || problemiAderenza.length > 0) {
-                lastIssues = [...problemiPerimetro, ...problemiAderenza];
+            if (problemiPerimetro.length > 0 || problemiAderenza.length > 0 || problemiBestPractice.length > 0) {
+                lastIssues = [...problemiPerimetro, ...problemiAderenza, ...problemiBestPractice];
                 logger.warn("orchestrator", "Revisione non superata, ripeto con feedback", {
                     argomento,
                     attempt,

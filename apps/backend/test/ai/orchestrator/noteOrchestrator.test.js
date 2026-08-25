@@ -8,6 +8,7 @@ const reviewerApprova = {
     review: async () => ({
         perimetro: { approvato: true, motivi: [] },
         aderenza: { aderente: true, motivi: [] },
+        bestPractice: { aggiornato: true, motivi: [] },
     }),
 };
 
@@ -184,7 +185,7 @@ test("run: il verdetto del reviewer viola lo schema (OutputParserException) -> g
                 errore.issues = ['Il campo "perimetro" non rispetta lo schema: atteso oggetto, ricevuta stringa'];
                 throw errore;
             }
-            return { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: true, motivi: [] } };
+            return { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: true, motivi: [] }, bestPractice: { aggiornato: true, motivi: [] } };
         },
     };
     const writer = { write: async (data) => data };
@@ -207,6 +208,7 @@ test("run: perimetro mai approvato -> esaurisce i tentativi con motivo 'validati
         review: async () => ({
             perimetro: { approvato: false, motivi: ["fuori tema"] },
             aderenza: { aderente: true, motivi: [] },
+            bestPractice: { aggiornato: true, motivi: [] },
         }),
     };
     const writer = { write: async () => { throw new Error("non deve essere chiamato"); } };
@@ -234,8 +236,8 @@ test("run: bozza non aderente alle fonti -> ripete con feedback e poi ha success
         review: async (argomento, data) => {
             chiamateControllo.push(data.titolo);
             return data.titolo === "bozza-1"
-                ? { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: false, motivi: ["descrive un'API non presente negli estratti"] } }
-                : { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: true, motivi: [] } };
+                ? { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: false, motivi: ["descrive un'API non presente negli estratti"] }, bestPractice: { aggiornato: true, motivi: [] } }
+                : { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: true, motivi: [] }, bestPractice: { aggiornato: true, motivi: [] } };
         },
     };
     const writer = { write: async (data) => data };
@@ -258,6 +260,7 @@ test("run: bozza mai aderente alle fonti -> esaurisce i tentativi con motivo 'va
         review: async () => ({
             perimetro: { approvato: true, motivi: [] },
             aderenza: { aderente: false, motivi: ["contenuto non supportato dalle fonti"] },
+            bestPractice: { aggiornato: true, motivi: [] },
         }),
     };
     const writer = { write: async () => { throw new Error("non deve essere chiamato"); } };
@@ -281,6 +284,7 @@ test("run: né perimetro né aderenza approvati -> il feedback combina i motivi 
         review: async () => ({
             perimetro: { approvato: false, motivi: ["fuori tema"] },
             aderenza: { aderente: false, motivi: ["contenuto non supportato dalle fonti"] },
+            bestPractice: { aggiornato: true, motivi: [] },
         }),
     };
     const writer = { write: async () => { throw new Error("non deve essere chiamato"); } };
@@ -293,6 +297,61 @@ test("run: né perimetro né aderenza approvati -> il feedback combina i motivi 
 
     assert.equal(risultato.status, "failed");
     assert.deepEqual(risultato.issues, ["fuori tema", "contenuto non supportato dalle fonti"]);
+});
+
+test("run: best practice non rispettata -> ripete con feedback e poi ha successo", async () => {
+    const chiamateControllo = [];
+    let tentativo = 0;
+    const generator = {
+        generate: async () => {
+            tentativo += 1;
+            return { draft: { titolo: `bozza-${tentativo}` }, risultatiRicerca: [] };
+        },
+    };
+    const validator = { validate: (draft) => ({ success: true, data: draft }) };
+    const reviewer = {
+        review: async (argomento, data) => {
+            chiamateControllo.push(data.titolo);
+            return data.titolo === "bozza-1"
+                ? { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: true, motivi: [] }, bestPractice: { aggiornato: false, motivi: ["usa una sintassi deprecata"] } }
+                : { perimetro: { approvato: true, motivi: [] }, aderenza: { aderente: true, motivi: [] }, bestPractice: { aggiornato: true, motivi: [] } };
+        },
+    };
+    const writer = { write: async (data) => data };
+
+    const orchestrator = createNoteOrchestrator({
+        generator, validator, reviewer, writer,
+        logger: loggerSilenzioso, maxAttempts: 3,
+    });
+    const risultato = await orchestrator.run("argomento");
+
+    assert.equal(risultato.status, "success");
+    assert.equal(risultato.attempts, 2);
+    assert.deepEqual(chiamateControllo, ["bozza-1", "bozza-2"]);
+});
+
+test("run: best practice mai rispettata -> esaurisce i tentativi con motivo 'validation'", async () => {
+    const generator = { generate: async () => ({ draft: { titolo: "x" }, risultatiRicerca: [] }) };
+    const validator = { validate: (draft) => ({ success: true, data: draft }) };
+    const reviewer = {
+        review: async () => ({
+            perimetro: { approvato: true, motivi: [] },
+            aderenza: { aderente: true, motivi: [] },
+            bestPractice: { aggiornato: false, motivi: ["usa una sintassi deprecata"] },
+        }),
+    };
+    const writer = { write: async () => { throw new Error("non deve essere chiamato"); } };
+
+    const orchestrator = createNoteOrchestrator({
+        generator, validator, reviewer, writer,
+        logger: loggerSilenzioso, maxAttempts: 2,
+    });
+    const risultato = await orchestrator.run("argomento");
+
+    assert.equal(risultato.status, "failed");
+    assert.equal(risultato.reason, "validation");
+    assert.deepEqual(risultato.issues, ["usa una sintassi deprecata"]);
+    assert.equal(risultato.attempts, 2);
 });
 
 test("run: scrittura su disco fallita -> si ferma subito senza ritentare", async () => {

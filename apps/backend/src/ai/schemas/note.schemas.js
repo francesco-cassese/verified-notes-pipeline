@@ -81,19 +81,24 @@ const NoteDraftSchema = z.object({
 
 const NoteSchema = NoteDraftSchema;
 
-// Verdetto del Reviewer (Agente 3.5): un'unica chiamata LLM che valuta due
+// Verdetto del Reviewer (Agente 3.5): un'unica chiamata LLM che valuta tre
 // aspetti indipendenti della bozza, distinti dalla conformità strutturale
 // già verificata da NoteSchema:
-// - "perimetro": la bozza resta in tema e al livello giusto (fuori tema/gap/
-//   troppo avanzato);
+// - "perimetro": la bozza resta in tema (niente divagazioni fuori tema) e a
+//   una profondità adatta a un'introduzione (non troppo avanzata) — non
+//   valuta più la "completezza" (concetti mancanti): quel sotto-criterio
+//   entrava spesso in contraddizione con "livello" da un tentativo all'altro
+//   (un tentativo chiedeva di aggiungere un concetto avanzato, il successivo
+//   di toglierlo perché troppo avanzato), quindi è stato rimosso;
 // - "aderenza": i fatti scritti trovano riscontro negli estratti delle fonti
-//   recuperate invece che nella memoria del modello.
-// Erano due chiamate separate perché sono due giudizi concettualmente
-// distinti, ma valutano la stessa bozza+fonti: unirle in una sola chiamata
-// dimezza i token di contesto (niente più bozza e fonti duplicate in due
-// prompt) senza annacquare nessuno dei due controlli, che restano verdetti
-// indipendenti con i propri motivi. "motivi" è vuoto/non significativo se il
-// relativo verdetto è positivo.
+//   recuperate invece che nella memoria del modello (controllo anti-
+//   allucinazione, non toccato da questa modifica);
+// - "bestPractice": la bozza non propone sintassi o pattern deprecati al
+//   posto delle alternative moderne consigliate oggi per l'argomento.
+// Restano verdetti indipendenti con i propri motivi in un'unica chiamata:
+// dimezza i token di contesto (niente più bozza e fonti duplicate in prompt
+// separati) senza annacquare nessuno dei controlli. "motivi" è vuoto/non
+// significativo se il relativo verdetto è positivo.
 // Niente `.max(5)` sugli array di motivi: reviewerAgent chiama il modello con
 // `strict: true` (structured output vincolato lato Anthropic, non solo
 // validato lato client), che garantisce tipi e campi corretti così il
@@ -116,6 +121,10 @@ const ReviewSchema = z.object({
     }),
     aderenza: z.object({
         aderente: z.boolean(),
+        motivi: z.array(z.string().min(1).max(800)),
+    }),
+    bestPractice: z.object({
+        aggiornato: z.boolean(),
         motivi: z.array(z.string().min(1).max(800)),
     }),
 });
