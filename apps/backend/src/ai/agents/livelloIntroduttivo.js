@@ -20,19 +20,28 @@
 // ufficiali di prompt engineering di Anthropic lo chiamano esplicitamente:
 // "Tell Claude what to do instead of what not to do", e raccomandano di
 // spiegare anche il PERCHÉ di una regola, non solo elencarla, perché il
-// modello generalizzi meglio invece di seguirla alla lettera). Questa
-// versione definisce quindi in positivo cosa scrivere e perché, con un solo
-// esempio a fare da ancora, invece di un elenco di cosa evitare.
+// modello generalizzi meglio invece di seguirla alla lettera).
+//
+// Seconda versione: riformulata in positivo, ma "meccanismo interno" da solo
+// si è rivelato troppo ambiguo — il Reviewer ha iniziato a bocciare anche il
+// comportamento ESSENZIALE dello strumento (es. quando si riesegue in base
+// alle dipendenze) trattandolo come un dettaglio interno opzionale, quando
+// invece è il contratto stesso che serve per usarlo correttamente. Questa
+// versione traccia esplicitamente quella linea: il comportamento osservabile
+// in base a cosa scrive il lettore è nucleo, non importa quante frasi serva
+// spiegarlo; il perché quel comportamento esiste a livello di implementazione,
+// o cosa succede solo in modalità/ambienti speciali, è il dettaglio da
+// ridurre o omettere.
 function buildIstruzioneLivelloIntroduttivo(argomento) {
     return `Chi legge sta usando "${argomento}" per la prima volta oggi, in un progetto normale: non sa nulla oltre a quello che scrivi in questo appunto, e il tuo unico obiettivo è farglielo usare correttamente in un caso comune. Scrivi solo:
 - cos'è e a cosa serve "${argomento}", con parole semplici;
 - la sintassi essenziale per usarlo: come si dichiara/invoca, quali parametri servono davvero;
 - un esempio minimo e concreto che funziona così com'è;
-- il comportamento che il lettore osserva usandolo nel modo più comune.
+- il comportamento che il lettore osserva usandolo nel modo più comune: COSA cambia nel risultato in base a COSA scrive (es. cosa succede se ometti un parametro, o se una condizione cambia). Questo fa parte del nucleo anche se richiede due o tre frasi per essere spiegato con chiarezza: non è un dettaglio da ridurre.
 
-Scrivi come se fosse l'unico appunto che questa persona leggerà oggi su "${argomento}": qualunque dettaglio che richiede di spiegare un secondo concetto per essere capito (uno strumento diverso, un meccanismo interno, un caso limite, un'ottimizzazione) aggiunge carico cognitivo senza aiutarla a scrivere la prima riga di codice funzionante. Se una fonte dedica ampio spazio a uno di questi dettagli, è perché quella fonte serve anche a un pubblico più avanzato di questo lettore: raccontalo con al massimo una frase di contesto, o ometti quella parte, come faresti raccontando l'argomento a voce a qualcuno che lo vede per la prima volta. In caso di dubbio, taglia: un appunto essenziale e verificabile vale più di uno ricco ma dispersivo.
+Sono invece da ridurre a un accenno di una frase, o da omettere del tutto: il PERCHÉ interno "${argomento}" si comporta così a livello di implementazione (motivazioni di design, meccanismi interni del linguaggio/framework); comportamenti che si manifestano solo in modalità o ambienti speciali (debug, sviluppo, test, produzione); strumenti, funzioni o API diverse citate come alternativa o corredo. Scrivi come se fosse l'unico appunto che questa persona leggerà oggi su "${argomento}": uno di questi dettagli aggiunge carico cognitivo senza aiutarla a scrivere la prima riga di codice funzionante, anche se la fonte ne parla diffusamente perché serve anche a un pubblico più avanzato. In caso di dubbio tra includere un comportamento osservabile o un dettaglio di implementazione, includi il primo e taglia il secondo.
 
-Esempio: se l'argomento fosse "l'operatore === in JavaScript" e la fonte dedicasse una sezione alle differenze di performance rispetto a ==, un buon appunto introduttivo non la tratterebbe affatto: si limiterebbe a spiegare cos'è il confronto stretto e a mostrarne un esempio. Dedicarle anche solo un paragrafo significherebbe scrivere per un lettore più avanzato di quello a cui questo appunto è destinato.`;
+Esempio: se l'argomento fosse "l'operatore === in JavaScript", spiegare che confronta valore E tipo, con un esempio che mostra 1 === "1" dare false, è nucleo (comportamento osservabile). Una sezione sulle differenze di performance interne rispetto a == non lo è: va omessa, anche se la fonte la tratta a lungo.`;
 }
 
 export { buildIstruzioneLivelloIntroduttivo };
