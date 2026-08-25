@@ -90,7 +90,7 @@ function GeneratorPage() {
                     type="text"
                     id="argomento"
                     name="argomento"
-                    placeholder="Es. React useEffect hook"
+                    placeholder="Es. foreach in PHP"
                     required
                     minLength={3}
                     maxLength={200}
