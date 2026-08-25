@@ -3,96 +3,96 @@ import assert from "node:assert/strict";
 import createGeneratorAgent from "../../../src/ai/agents/generatorAgent.js";
 import { ErrorCodes } from "../../../src/utils/errors.js";
 
-const loggerSilenzioso = { info() {}, warn() {}, error() {} };
+const silentLogger = { info() {}, warn() {}, error() {} };
 
-function fakeSearchTool(datiGrezzi) {
+function fakeSearchTool(rawResults) {
     return {
-        invoke: async () => JSON.stringify({ argomento: "test", dati_grezzi: datiGrezzi }),
+        invoke: async () => JSON.stringify({ topic: "test", rawResults }),
     };
 }
 
 test("generate: nessuna fonte trovata -> NO_OFFICIAL_SOURCE_ERROR senza chiamare il modello", async () => {
-    let modelChiamato = false;
-    const model = { withStructuredOutput: () => ({ invoke: async () => { modelChiamato = true; } }) };
-    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool([]), logger: loggerSilenzioso });
+    let modelCalled = false;
+    const model = { withStructuredOutput: () => ({ invoke: async () => { modelCalled = true; } }) };
+    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool([]), logger: silentLogger });
 
     await assert.rejects(
         () => generator.generate("argomento a caso"),
         (err) => err.code === ErrorCodes.NO_OFFICIAL_SOURCE_ERROR
     );
-    assert.equal(modelChiamato, false);
+    assert.equal(modelCalled, false);
 });
 
 test("generate: fonti trovate ma senza testo estratto -> GENERATION_ERROR senza chiamare il modello", async () => {
-    let modelChiamato = false;
-    const model = { withStructuredOutput: () => ({ invoke: async () => { modelChiamato = true; } }) };
-    const datiGrezzi = [{ title: "React Docs", url: "https://react.dev/learn", contenuto: null }];
-    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(datiGrezzi), logger: loggerSilenzioso });
+    let modelCalled = false;
+    const model = { withStructuredOutput: () => ({ invoke: async () => { modelCalled = true; } }) };
+    const rawResults = [{ title: "React Docs", url: "https://react.dev/learn", content: null }];
+    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(rawResults), logger: silentLogger });
 
     await assert.rejects(
         () => generator.generate("argomento a caso"),
         (err) => err.code === ErrorCodes.GENERATION_ERROR
     );
-    assert.equal(modelChiamato, false);
+    assert.equal(modelCalled, false);
 });
 
-test("generate: almeno una fonte con testo -> chiama il modello e restituisce draft + risultatiRicerca", async () => {
-    const draftFinto = { titolo: "Fake" };
-    const model = { withStructuredOutput: () => ({ invoke: async () => draftFinto }) };
-    const datiGrezzi = [
-        { title: "React Docs", url: "https://react.dev/learn", contenuto: "testo estratto" },
-        { title: "MDN", url: "https://developer.mozilla.org/x", contenuto: null },
+test("generate: almeno una fonte con testo -> chiama il modello e restituisce draft + searchResults", async () => {
+    const fakeDraft = { title: "Fake" };
+    const model = { withStructuredOutput: () => ({ invoke: async () => fakeDraft }) };
+    const rawResults = [
+        { title: "React Docs", url: "https://react.dev/learn", content: "testo estratto" },
+        { title: "MDN", url: "https://developer.mozilla.org/x", content: null },
     ];
-    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(datiGrezzi), logger: loggerSilenzioso });
+    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(rawResults), logger: silentLogger });
 
-    const risultato = await generator.generate("argomento a caso");
+    const result = await generator.generate("argomento a caso");
 
-    assert.equal(risultato.draft, draftFinto);
-    assert.deepEqual(risultato.risultatiRicerca, datiGrezzi);
+    assert.equal(result.draft, fakeDraft);
+    assert.deepEqual(result.searchResults, rawResults);
 });
 
-test("generate: con risultatiRicercaCache non chiama il tool di ricerca e riusa le fonti passate", async () => {
-    let searchToolChiamato = false;
-    const searchTool = { invoke: async () => { searchToolChiamato = true; return JSON.stringify({ dati_grezzi: [] }); } };
-    const draftFinto = { titolo: "Fake" };
-    const model = { withStructuredOutput: () => ({ invoke: async () => draftFinto }) };
-    const cache = [{ title: "React Docs", url: "https://react.dev/learn", contenuto: "testo estratto" }];
-    const generator = createGeneratorAgent({ model, searchTool, logger: loggerSilenzioso });
+test("generate: con searchResultsCache non chiama il tool di ricerca e riusa le fonti passate", async () => {
+    let searchToolCalled = false;
+    const searchTool = { invoke: async () => { searchToolCalled = true; return JSON.stringify({ rawResults: [] }); } };
+    const fakeDraft = { title: "Fake" };
+    const model = { withStructuredOutput: () => ({ invoke: async () => fakeDraft }) };
+    const cache = [{ title: "React Docs", url: "https://react.dev/learn", content: "testo estratto" }];
+    const generator = createGeneratorAgent({ model, searchTool, logger: silentLogger });
 
-    const risultato = await generator.generate("argomento a caso", { risultatiRicercaCache: cache });
+    const result = await generator.generate("argomento a caso", { searchResultsCache: cache });
 
-    assert.equal(searchToolChiamato, false);
-    assert.equal(risultato.draft, draftFinto);
-    assert.deepEqual(risultato.risultatiRicerca, cache);
+    assert.equal(searchToolCalled, false);
+    assert.equal(result.draft, fakeDraft);
+    assert.deepEqual(result.searchResults, cache);
 });
 
 test("generate: errore del modello viene incapsulato in GENERATION_ERROR con causa", async () => {
-    const erroreOriginale = new Error("modello non disponibile");
-    const model = { withStructuredOutput: () => ({ invoke: async () => { throw erroreOriginale; } }) };
-    const datiGrezzi = [{ title: "React Docs", url: "https://react.dev/learn", contenuto: "testo" }];
-    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(datiGrezzi), logger: loggerSilenzioso });
+    const originalError = new Error("modello non disponibile");
+    const model = { withStructuredOutput: () => ({ invoke: async () => { throw originalError; } }) };
+    const rawResults = [{ title: "React Docs", url: "https://react.dev/learn", content: "testo" }];
+    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(rawResults), logger: silentLogger });
 
     await assert.rejects(
         () => generator.generate("argomento a caso"),
-        (err) => err.code === ErrorCodes.GENERATION_ERROR && err.cause === erroreOriginale && err.issues === null
+        (err) => err.code === ErrorCodes.GENERATION_ERROR && err.cause === originalError && err.issues === null
     );
 });
 
 test("generate: OutputParserException (bozza fuori schema) espone issues leggibili per il retry successivo", async () => {
-    const erroreParsing = new Error(
-        'Failed to parse. Text: "{...}". Error: [{"code":"too_big","maximum":300,"path":["erroriComuni",1,"soluzione"],"message":"Too big: expected string to have <=300 characters"}]\n\nTroubleshooting URL: https://docs.langchain.com/oss/javascript/langchain/errors/OUTPUT_PARSING_FAILURE/'
+    const parsingError = new Error(
+        'Failed to parse. Text: "{...}". Error: [{"code":"too_big","maximum":300,"path":["commonMistakes",1,"solution"],"message":"Too big: expected string to have <=300 characters"}]\n\nTroubleshooting URL: https://docs.langchain.com/oss/javascript/langchain/errors/OUTPUT_PARSING_FAILURE/'
     );
-    erroreParsing.name = "OutputParserException";
-    const model = { withStructuredOutput: () => ({ invoke: async () => { throw erroreParsing; } }) };
-    const datiGrezzi = [{ title: "React Docs", url: "https://react.dev/learn", contenuto: "testo" }];
-    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(datiGrezzi), logger: loggerSilenzioso });
+    parsingError.name = "OutputParserException";
+    const model = { withStructuredOutput: () => ({ invoke: async () => { throw parsingError; } }) };
+    const rawResults = [{ title: "React Docs", url: "https://react.dev/learn", content: "testo" }];
+    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(rawResults), logger: silentLogger });
 
     await assert.rejects(
         () => generator.generate("argomento a caso"),
         (err) => {
             assert.equal(err.code, ErrorCodes.GENERATION_ERROR);
             assert.deepEqual(err.issues, [
-                'Il campo "erroriComuni.1.soluzione" non rispetta lo schema: Too big: expected string to have <=300 characters',
+                'Il campo "commonMistakes.1.solution" non rispetta lo schema: Too big: expected string to have <=300 characters',
             ]);
             return true;
         }
@@ -100,11 +100,11 @@ test("generate: OutputParserException (bozza fuori schema) espone issues leggibi
 });
 
 test("generate: errore di parsing con formato inatteso -> issues null, nessun feedback fasullo", async () => {
-    const erroreParsing = new Error('Failed to parse. Text: "{...}". Error: qualcosa di non-JSON');
-    erroreParsing.name = "OutputParserException";
-    const model = { withStructuredOutput: () => ({ invoke: async () => { throw erroreParsing; } }) };
-    const datiGrezzi = [{ title: "React Docs", url: "https://react.dev/learn", contenuto: "testo" }];
-    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(datiGrezzi), logger: loggerSilenzioso });
+    const parsingError = new Error('Failed to parse. Text: "{...}". Error: qualcosa di non-JSON');
+    parsingError.name = "OutputParserException";
+    const model = { withStructuredOutput: () => ({ invoke: async () => { throw parsingError; } }) };
+    const rawResults = [{ title: "React Docs", url: "https://react.dev/learn", content: "testo" }];
+    const generator = createGeneratorAgent({ model, searchTool: fakeSearchTool(rawResults), logger: silentLogger });
 
     await assert.rejects(
         () => generator.generate("argomento a caso"),

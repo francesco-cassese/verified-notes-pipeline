@@ -1,6 +1,6 @@
 import express from "express";
 import rateLimit from "express-rate-limit";
-import createAppuntiController from "../controllers/appunti.controller.js";
+import createNotesController from "../controllers/notes.controller.js";
 import settings from "../utils/settings.js";
 
 // Solo la generazione costa (ricerca Brave + chiamate LLM, fino a maxAttempts
@@ -12,18 +12,18 @@ const generationRateLimiter = rateLimit({
     max: settings.generationRateLimitMax,
     standardHeaders: true,
     legacyHeaders: false,
-    message: { errore: "Troppe richieste di generazione, riprova più tardi." },
+    message: { error: "Troppe richieste di generazione, riprova più tardi." },
 });
 
-function createAppuntiRouter(controller = createAppuntiController()) {
+function createNotesRouter(controller = createNotesController()) {
     const router = express.Router();
 
-    router.post("/", generationRateLimiter, controller.generaAppunto);
-    router.get("/cartelle", controller.listaCartelle);
-    router.get("/cartelle/:cartella", controller.listaAppunti);
-    router.get("/cartelle/:cartella/:nomeFile", controller.leggiAppunto);
+    router.post("/", generationRateLimiter, controller.generateNote);
+    router.get("/folders", controller.listFolders);
+    router.get("/folders/:folder", controller.listNotes);
+    router.get("/folders/:folder/:fileName", controller.readNote);
 
     return router;
 }
 
-export default createAppuntiRouter;
+export default createNotesRouter;

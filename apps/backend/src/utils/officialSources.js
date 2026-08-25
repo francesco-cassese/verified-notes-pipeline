@@ -62,7 +62,7 @@ const OFFICIAL_DOMAINS = [
     "cloud.google.com",
     "terraform.io",
     "nginx.org",
-    // Sistemi
+    // Systems
     "kernel.org",
     "man7.org",
     // Stack di questo progetto
@@ -93,7 +93,7 @@ function getHostname(url) {
 function isOfficialUrl(url) {
     const hostname = getHostname(url);
     if (!hostname) return false;
-    return OFFICIAL_DOMAINS.some((dominio) => hostname === dominio || hostname.endsWith(`.${dominio}`));
+    return OFFICIAL_DOMAINS.some((domain) => hostname === domain || hostname.endsWith(`.${domain}`));
 }
 
 export { OFFICIAL_DOMAINS, isOfficialUrl };

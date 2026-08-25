@@ -3,12 +3,12 @@ import { NoteSchema } from "../schemas/note.schemas.js";
 function createValidatorAgent({ schema = NoteSchema, logger } = {}) {
     // Wrapper puro su safeParse + controllo di appartenenza, nessuna chiamata di
     // rete/LLM: sicuro ed economico eseguirlo a ogni tentativo di retry.
-    // fontiRecuperate è l'elenco degli URL davvero restituiti dalla ricerca per
+    // fetchedSources è l'elenco degli URL davvero restituiti dalla ricerca per
     // questo tentativo (vedi generatorAgent): isOfficialUrl (nello schema) verifica
     // solo che il dominio sia ufficiale, non basta contro un URL inventato ma
     // plausibile su quel dominio, quindi qui controlliamo anche l'appartenenza
     // esatta a quell'elenco.
-    function validate(draft, fontiRecuperate = []) {
+    function validate(draft, fetchedSources = []) {
         const result = schema.safeParse(draft);
 
         if (!result.success) {
@@ -17,12 +17,12 @@ function createValidatorAgent({ schema = NoteSchema, logger } = {}) {
             return { success: false, issues };
         }
 
-        const disponibili = new Set(fontiRecuperate);
-        const fontiInventate = result.data.fonti.filter((f) => !disponibili.has(f.url));
+        const available = new Set(fetchedSources);
+        const fabricatedSources = result.data.sources.filter((s) => !available.has(s.url));
 
-        if (fontiInventate.length > 0) {
-            const issues = fontiInventate.map(
-                (f) => `fonti: l'URL "${f.url}" non è tra le fonti trovate dalla ricerca per questo argomento (possibile fonte inventata dal modello)`
+        if (fabricatedSources.length > 0) {
+            const issues = fabricatedSources.map(
+                (s) => `sources: l'URL "${s.url}" non è tra le fonti trovate dalla ricerca per questo argomento (possibile fonte inventata dal modello)`
             );
             logger?.warn("validatorAgent", "Fonti citate non presenti tra quelle recuperate", { issues });
             return { success: false, issues };

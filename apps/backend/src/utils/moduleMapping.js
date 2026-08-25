@@ -59,7 +59,7 @@ const MODULE_FOLDER_MAP = {
     "azure": "cloud",
     "gcp": "cloud",
     "google cloud": "cloud",
-    "linux": "sistemi",
+    "linux": "systems",
     "html": "web",
     "css": "web",
 };
@@ -67,14 +67,14 @@ const MODULE_FOLDER_MAP = {
 // Modulo non presente in mappa: fallback allo slug diretto (stesso identico
 // esito di prima) ma segnalato nei log, così la mappa può crescere nel tempo
 // senza mai bloccare la generazione di un appunto.
-function resolveCartella(modulo, logger) {
-    const chiave = String(modulo).trim().toLowerCase();
-    const cartella = MODULE_FOLDER_MAP[chiave];
+function resolveFolder(module, logger) {
+    const key = String(module).trim().toLowerCase();
+    const folder = MODULE_FOLDER_MAP[key];
 
-    if (cartella) return cartella;
+    if (folder) return folder;
 
-    logger?.warn("archivistAgent", "Modulo non presente nella mappa, uso slug diretto", { modulo });
-    return slugify(modulo);
+    logger?.warn("archivistAgent", "Modulo non presente nella mappa, uso slug diretto", { module });
+    return slugify(module);
 }
 
-export { MODULE_FOLDER_MAP, resolveCartella };
+export { MODULE_FOLDER_MAP, resolveFolder };

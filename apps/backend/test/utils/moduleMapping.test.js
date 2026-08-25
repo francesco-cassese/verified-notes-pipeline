@@ -1,28 +1,28 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { resolveCartella } from "../../src/utils/moduleMapping.js";
+import { resolveFolder } from "../../src/utils/moduleMapping.js";
 
-test("resolveCartella: modulo mappato, case-insensitive e con spazi ai bordi", () => {
-    assert.equal(resolveCartella("React"), "react");
-    assert.equal(resolveCartella(" REACT.JS "), "react");
+test("resolveFolder: modulo mappato, case-insensitive e con spazi ai bordi", () => {
+    assert.equal(resolveFolder("React"), "react");
+    assert.equal(resolveFolder(" REACT.JS "), "react");
 });
 
-test("resolveCartella: alias diversi confluiscono nella stessa cartella canonica", () => {
-    assert.equal(resolveCartella("nextjs"), "react");
-    assert.equal(resolveCartella("Next.js"), "react");
+test("resolveFolder: alias diversi confluiscono nella stessa cartella canonica", () => {
+    assert.equal(resolveFolder("nextjs"), "react");
+    assert.equal(resolveFolder("Next.js"), "react");
 });
 
-test("resolveCartella: modulo non mappato ricade sullo slug e avvisa il logger", () => {
+test("resolveFolder: modulo non mappato ricade sullo slug e avvisa il logger", () => {
     const warnings = [];
-    const logger = { warn: (scope, messaggio, meta) => warnings.push({ scope, messaggio, meta }) };
+    const logger = { warn: (scope, message, meta) => warnings.push({ scope, message, meta }) };
 
-    const cartella = resolveCartella("Zig Lang", logger);
+    const folder = resolveFolder("Zig Lang", logger);
 
-    assert.equal(cartella, "zig-lang");
+    assert.equal(folder, "zig-lang");
     assert.equal(warnings.length, 1);
     assert.equal(warnings[0].scope, "archivistAgent");
 });
 
-test("resolveCartella: funziona anche senza logger", () => {
-    assert.equal(resolveCartella("modulo-sconosciuto-xyz"), "modulo-sconosciuto-xyz");
+test("resolveFolder: funziona anche senza logger", () => {
+    assert.equal(resolveFolder("modulo-sconosciuto-xyz"), "modulo-sconosciuto-xyz");
 });

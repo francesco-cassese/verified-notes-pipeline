@@ -1,34 +1,34 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { AgentError, ErrorCodes } from "./errors.js";
-import { resolveSafeReadPath, isNomeCartellaValido } from "./safePath.js";
+import { resolveSafeReadPath, isValidFolderName } from "./safePath.js";
 
 // Estrae solo i campi che servono per l'elenco/anteprima da un frontmatter
 // YAML scritto da writerAgent (formato fisso, vedi buildMarkdown): una regex
 // mirata basta ed evita di aggiungere un parser YAML completo solo per questo.
-function estraiFrontmatter(contenuto) {
-    const match = contenuto.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
-    if (!match) return { meta: {}, corpo: contenuto };
+function extractFrontmatter(content) {
+    const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+    if (!match) return { meta: {}, body: content };
 
-    const [, blocco, corpo] = match;
-    const campo = (nome) => blocco.match(new RegExp(`^${nome}: "(.*)"$`, "m"))?.[1]
-        ?? blocco.match(new RegExp(`^${nome}: (.+)$`, "m"))?.[1];
+    const [, block, body] = match;
+    const field = (name) => block.match(new RegExp(`^${name}: "(.*)"$`, "m"))?.[1]
+        ?? block.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1];
 
     return {
         meta: {
-            titolo: campo("titolo") ?? "",
-            modulo: campo("modulo") ?? "",
-            argomento: campo("argomento") ?? "",
-            id: campo("id") ?? "",
-            creatoIl: campo("creatoIl") ?? "",
+            title: field("title") ?? "",
+            module: field("module") ?? "",
+            topic: field("topic") ?? "",
+            id: field("id") ?? "",
+            createdAt: field("createdAt") ?? "",
         },
-        corpo: corpo.trim(),
+        body: body.trim(),
     };
 }
 
-async function esisteCartella(baseDir, cartella) {
+async function folderExists(baseDir, folder) {
     try {
-        const stat = await fs.stat(path.join(baseDir, cartella));
+        const stat = await fs.stat(path.join(baseDir, folder));
         return stat.isDirectory();
     } catch {
         return false;
@@ -37,83 +37,83 @@ async function esisteCartella(baseDir, cartella) {
 
 // Elenca le sottocartelle di baseDir (una per modulo/tecnologia) con il
 // numero di appunti (.md) contenuti, ordinate alfabeticamente.
-async function listCartelle(baseDir) {
-    let voci;
+async function listFolders(baseDir) {
+    let entries;
     try {
-        voci = await fs.readdir(baseDir, { withFileTypes: true });
+        entries = await fs.readdir(baseDir, { withFileTypes: true });
     } catch {
         return [];
     }
 
-    const cartelle = voci.filter((v) => v.isDirectory()).map((v) => v.name);
+    const folders = entries.filter((e) => e.isDirectory()).map((e) => e.name);
 
-    const risultati = await Promise.all(
-        cartelle.map(async (cartella) => {
-            const file = await fs.readdir(path.join(baseDir, cartella));
-            const numeroAppunti = file.filter((f) => f.endsWith(".md")).length;
-            return { cartella, numeroAppunti };
+    const results = await Promise.all(
+        folders.map(async (folder) => {
+            const files = await fs.readdir(path.join(baseDir, folder));
+            const noteCount = files.filter((f) => f.endsWith(".md")).length;
+            return { folder, noteCount };
         })
     );
 
-    return risultati
-        .filter((r) => r.numeroAppunti > 0)
-        .sort((a, b) => a.cartella.localeCompare(b.cartella));
+    return results
+        .filter((r) => r.noteCount > 0)
+        .sort((a, b) => a.folder.localeCompare(b.folder));
 }
 
 // Elenca gli appunti (.md) di una cartella con i metadati minimi per una
 // lista (titolo, data): legge il sidecar .json quando c'è (più veloce e
 // affidabile), altrimenti ripiega sul frontmatter del .md.
-async function listAppunti(baseDir, cartella) {
-    if (!isNomeCartellaValido(cartella)) {
+async function listNotes(baseDir, folder) {
+    if (!isValidFolderName(folder)) {
         throw new AgentError("Nome cartella non valido.", ErrorCodes.PATH_TRAVERSAL_ERROR);
     }
 
-    if (!(await esisteCartella(baseDir, cartella))) {
-        throw new AgentError(`Cartella "${cartella}" non trovata.`, ErrorCodes.NOT_FOUND_ERROR);
+    if (!(await folderExists(baseDir, folder))) {
+        throw new AgentError(`Cartella "${folder}" non trovata.`, ErrorCodes.NOT_FOUND_ERROR);
     }
 
-    const dir = path.join(baseDir, cartella);
-    const file = await fs.readdir(dir);
-    const nomiMd = file.filter((f) => f.endsWith(".md"));
+    const dir = path.join(baseDir, folder);
+    const files = await fs.readdir(dir);
+    const mdFileNames = files.filter((f) => f.endsWith(".md"));
 
-    const appunti = await Promise.all(
-        nomiMd.map(async (nomeFile) => {
-            const jsonPath = path.join(dir, nomeFile.replace(/\.md$/, ".json"));
+    const notes = await Promise.all(
+        mdFileNames.map(async (fileName) => {
+            const jsonPath = path.join(dir, fileName.replace(/\.md$/, ".json"));
 
             try {
                 const json = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
-                return { nomeFile, titolo: json.titolo, creatoIl: json.creatoIl, id: json.id };
+                return { fileName, title: json.title, createdAt: json.createdAt, id: json.id };
             } catch {
-                const contenuto = await fs.readFile(path.join(dir, nomeFile), "utf-8");
-                const { meta } = estraiFrontmatter(contenuto);
-                return { nomeFile, titolo: meta.titolo, creatoIl: meta.creatoIl, id: meta.id };
+                const content = await fs.readFile(path.join(dir, fileName), "utf-8");
+                const { meta } = extractFrontmatter(content);
+                return { fileName, title: meta.title, createdAt: meta.createdAt, id: meta.id };
             }
         })
     );
 
-    return appunti.sort((a, b) => (a.creatoIl < b.creatoIl ? 1 : -1));
+    return notes.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 }
 
 // Legge un singolo appunto: preferisce il sidecar .json (dati strutturati,
 // stesso formato usato subito dopo la generazione) e ripiega sul .md grezzo
 // (frontmatter + corpo markdown) per gli appunti scritti prima che il
 // sidecar esistesse.
-async function leggiAppunto(baseDir, cartella, nomeFile) {
-    const mdPath = resolveSafeReadPath(baseDir, cartella, nomeFile);
+async function readNote(baseDir, folder, fileName) {
+    const mdPath = resolveSafeReadPath(baseDir, folder, fileName);
     const jsonPath = mdPath.replace(/\.md$/, ".json");
 
     try {
         const json = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
-        return { formato: "json", nota: json };
+        return { format: "json", note: json };
     } catch {
-        let contenuto;
+        let content;
         try {
-            contenuto = await fs.readFile(mdPath, "utf-8");
+            content = await fs.readFile(mdPath, "utf-8");
         } catch {
-            throw new AgentError(`Appunto "${cartella}/${nomeFile}" non trovato.`, ErrorCodes.NOT_FOUND_ERROR);
+            throw new AgentError(`Appunto "${folder}/${fileName}" non trovato.`, ErrorCodes.NOT_FOUND_ERROR);
         }
-        const { meta, corpo } = estraiFrontmatter(contenuto);
-        return { formato: "markdown", meta, corpo };
+        const { meta, body } = extractFrontmatter(content);
+        return { format: "markdown", meta, body };
     }
 }
 
@@ -122,7 +122,7 @@ async function leggiAppunto(baseDir, cartella, nomeFile) {
 // questo filtro "foreach in PHP" e "PHP foreach" risultano argomenti diversi
 // solo per l'ordine delle parole e una preposizione, mentre sono chiaramente
 // la stessa richiesta.
-const PAROLE_IGNORATE = new Set([
+const IGNORED_WORDS = new Set([
     "il", "lo", "la", "i", "gli", "le", "un", "uno", "una",
     "di", "del", "dello", "della", "dei", "degli", "delle",
     "a", "al", "allo", "alla", "ai", "agli", "alle",
@@ -134,43 +134,43 @@ const PAROLE_IGNORATE = new Set([
 // (minuscolo, senza punteggiatura, senza duplicati, senza parole di
 // collegamento): due argomenti con le stesse parole chiave ma ordine o
 // preposizioni diversi producono la stessa chiave, quindi risultano uguali.
-function chiaveArgomento(testo) {
-    const parole = (testo.toLowerCase().match(/[a-z0-9]+/g) ?? [])
-        .filter((parola) => !PAROLE_IGNORATE.has(parola));
-    return [...new Set(parole)].sort().join(" ");
+function topicKey(text) {
+    const words = (text.toLowerCase().match(/[a-z0-9]+/g) ?? [])
+        .filter((word) => !IGNORED_WORDS.has(word));
+    return [...new Set(words)].sort().join(" ");
 }
 
 // Cerca tra tutti gli appunti già salvati uno con lo stesso argomento
-// (confronto per parole chiave sul campo "argomento", non sul titolo scelto
-// dal modello, che può differire dalla richiesta originale): permette al
+// (confronto per parole chiave sul campo "topic", non sul titolo scelto dal
+// modello, che può differire dalla richiesta originale): permette al
 // controller di rifiutare una generazione duplicata prima di avviare la
 // pipeline (ricerca + più chiamate LLM, tutte a pagamento) invece di scoprire
 // il doppione solo a fine generazione. Stessa strategia json-poi-frontmatter
-// di listAppunti/leggiAppunto sopra.
-async function trovaAppuntoPerArgomento(baseDir, argomento) {
-    const chiaveCercata = chiaveArgomento(argomento);
-    const cartelle = await listCartelle(baseDir);
+// di listNotes/readNote sopra.
+async function findNoteByTopic(baseDir, topic) {
+    const searchedKey = topicKey(topic);
+    const folders = await listFolders(baseDir);
 
-    for (const { cartella } of cartelle) {
-        const dir = path.join(baseDir, cartella);
-        const nomiMd = (await fs.readdir(dir)).filter((f) => f.endsWith(".md"));
+    for (const { folder } of folders) {
+        const dir = path.join(baseDir, folder);
+        const mdFileNames = (await fs.readdir(dir)).filter((f) => f.endsWith(".md"));
 
-        for (const nomeFile of nomiMd) {
-            const jsonPath = path.join(dir, nomeFile.replace(/\.md$/, ".json"));
-            let argomentoSalvato;
-            let titolo;
+        for (const fileName of mdFileNames) {
+            const jsonPath = path.join(dir, fileName.replace(/\.md$/, ".json"));
+            let savedTopic;
+            let title;
 
             try {
                 const json = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
-                argomentoSalvato = json.argomento;
-                titolo = json.titolo;
+                savedTopic = json.topic;
+                title = json.title;
             } catch {
-                const contenuto = await fs.readFile(path.join(dir, nomeFile), "utf-8");
-                ({ argomento: argomentoSalvato, titolo } = estraiFrontmatter(contenuto).meta);
+                const content = await fs.readFile(path.join(dir, fileName), "utf-8");
+                ({ topic: savedTopic, title } = extractFrontmatter(content).meta);
             }
 
-            if (argomentoSalvato && chiaveArgomento(argomentoSalvato) === chiaveCercata) {
-                return { cartella, nomeFile, titolo };
+            if (savedTopic && topicKey(savedTopic) === searchedKey) {
+                return { folder, fileName, title };
             }
         }
     }
@@ -178,4 +178,4 @@ async function trovaAppuntoPerArgomento(baseDir, argomento) {
     return null;
 }
 
-export { listCartelle, listAppunti, leggiAppunto, trovaAppuntoPerArgomento };
+export { listFolders, listNotes, readNote, findNoteByTopic };

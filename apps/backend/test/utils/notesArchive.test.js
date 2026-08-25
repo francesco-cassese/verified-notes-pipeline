@@ -3,80 +3,80 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { trovaAppuntoPerArgomento } from "../../src/utils/notesArchive.js";
+import { findNoteByTopic } from "../../src/utils/notesArchive.js";
 
-async function creaNotesDirTemporanea() {
-    return fs.mkdtemp(path.join(os.tmpdir(), "appunti-archive-test-"));
+async function createTempNotesDir() {
+    return fs.mkdtemp(path.join(os.tmpdir(), "notes-archive-test-"));
 }
 
-async function scriviAppuntoFinto(notesDir, cartella, nomeFile, { argomento, titolo }) {
-    const dir = path.join(notesDir, cartella);
+async function writeFakeNote(notesDir, folder, fileName, { topic, title }) {
+    const dir = path.join(notesDir, folder);
     await fs.mkdir(dir, { recursive: true });
-    await fs.writeFile(path.join(dir, `${nomeFile}.md`), `---\ntitolo: "${titolo}"\n---\n\ncorpo`, "utf-8");
+    await fs.writeFile(path.join(dir, `${fileName}.md`), `---\ntitle: "${title}"\n---\n\nbody`, "utf-8");
     await fs.writeFile(
-        path.join(dir, `${nomeFile}.json`),
-        JSON.stringify({ argomento, titolo }, null, 2),
+        path.join(dir, `${fileName}.json`),
+        JSON.stringify({ topic, title }, null, 2),
         "utf-8"
     );
 }
 
-test("trovaAppuntoPerArgomento: trova un appunto esistente con lo stesso argomento (case-insensitive)", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+test("findNoteByTopic: trova un appunto esistente con lo stesso argomento (case-insensitive)", async () => {
+    const notesDir = await createTempNotesDir();
     try {
-        await scriviAppuntoFinto(notesDir, "react", "hooks", { argomento: "React useEffect hook", titolo: "Introduzione agli Hooks" });
+        await writeFakeNote(notesDir, "react", "hooks", { topic: "React useEffect hook", title: "Introduzione agli Hooks" });
 
-        const trovato = await trovaAppuntoPerArgomento(notesDir, "  REACT USEEFFECT HOOK  ");
+        const found = await findNoteByTopic(notesDir, "  REACT USEEFFECT HOOK  ");
 
-        assert.deepEqual(trovato, { cartella: "react", nomeFile: "hooks.md", titolo: "Introduzione agli Hooks" });
+        assert.deepEqual(found, { folder: "react", fileName: "hooks.md", title: "Introduzione agli Hooks" });
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
-test("trovaAppuntoPerArgomento: trova un appunto con parole riordinate e preposizioni diverse", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+test("findNoteByTopic: trova un appunto con parole riordinate e preposizioni diverse", async () => {
+    const notesDir = await createTempNotesDir();
     try {
-        await scriviAppuntoFinto(notesDir, "php", "foreach", { argomento: "PHP foreach", titolo: "Iterazione con foreach" });
+        await writeFakeNote(notesDir, "php", "foreach", { topic: "PHP foreach", title: "Iterazione con foreach" });
 
-        const trovato = await trovaAppuntoPerArgomento(notesDir, "foreach in PHP");
+        const found = await findNoteByTopic(notesDir, "foreach in PHP");
 
-        assert.deepEqual(trovato, { cartella: "php", nomeFile: "foreach.md", titolo: "Iterazione con foreach" });
+        assert.deepEqual(found, { folder: "php", fileName: "foreach.md", title: "Iterazione con foreach" });
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
-test("trovaAppuntoPerArgomento: argomento con una parola chiave in più non è considerato un doppione", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+test("findNoteByTopic: argomento con una parola chiave in più non è considerato un doppione", async () => {
+    const notesDir = await createTempNotesDir();
     try {
-        await scriviAppuntoFinto(notesDir, "react", "hooks", { argomento: "React hooks", titolo: "Introduzione agli Hooks" });
+        await writeFakeNote(notesDir, "react", "hooks", { topic: "React hooks", title: "Introduzione agli Hooks" });
 
-        const trovato = await trovaAppuntoPerArgomento(notesDir, "React Router hooks");
+        const found = await findNoteByTopic(notesDir, "React Router hooks");
 
-        assert.equal(trovato, null);
+        assert.equal(found, null);
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
-test("trovaAppuntoPerArgomento: nessun appunto corrispondente -> null", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+test("findNoteByTopic: nessun appunto corrispondente -> null", async () => {
+    const notesDir = await createTempNotesDir();
     try {
-        await scriviAppuntoFinto(notesDir, "react", "hooks", { argomento: "React useEffect hook", titolo: "Introduzione agli Hooks" });
+        await writeFakeNote(notesDir, "react", "hooks", { topic: "React useEffect hook", title: "Introduzione agli Hooks" });
 
-        const trovato = await trovaAppuntoPerArgomento(notesDir, "PHP foreach");
+        const found = await findNoteByTopic(notesDir, "PHP foreach");
 
-        assert.equal(trovato, null);
+        assert.equal(found, null);
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
-test("trovaAppuntoPerArgomento: archivio vuoto -> null senza errori", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+test("findNoteByTopic: archivio vuoto -> null senza errori", async () => {
+    const notesDir = await createTempNotesDir();
     try {
-        const trovato = await trovaAppuntoPerArgomento(notesDir, "qualsiasi argomento");
-        assert.equal(trovato, null);
+        const found = await findNoteByTopic(notesDir, "qualsiasi argomento");
+        assert.equal(found, null);
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }

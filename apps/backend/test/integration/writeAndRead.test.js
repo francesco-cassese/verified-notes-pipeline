@@ -4,95 +4,95 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import createWriterAgent from "../../src/ai/agents/writerAgent.js";
-import { listCartelle, listAppunti, leggiAppunto } from "../../src/utils/notesArchive.js";
+import { listFolders, listNotes, readNote } from "../../src/utils/notesArchive.js";
 
-const loggerSilenzioso = { info() {}, warn() {}, error() {} };
+const silentLogger = { info() {}, warn() {}, error() {} };
 
-async function creaNotesDirTemporanea() {
-    return fs.mkdtemp(path.join(os.tmpdir(), "appunti-test-"));
+async function createTempNotesDir() {
+    return fs.mkdtemp(path.join(os.tmpdir(), "notes-test-"));
 }
 
-function notaValida(overrides = {}) {
+function validNote(overrides = {}) {
     return {
-        modulo: "React",
-        titolo: "Introduzione agli Hooks",
-        argomento: "hooks react",
-        sezioni: [{ titolo: "Cos'è un hook", contenuto: "Un hook è una funzione speciale." }],
-        fonti: [{ url: "https://react.dev/learn/hooks", titolo: "React Hooks" }],
+        module: "React",
+        title: "Introduzione agli Hooks",
+        topic: "hooks react",
+        sections: [{ title: "Cos'è un hook", content: "Un hook è una funzione speciale." }],
+        sources: [{ url: "https://react.dev/learn/hooks", title: "React Hooks" }],
         keyTakeaways: ["Gli hook si usano solo nei componenti funzione."],
-        glossario: [],
-        erroriComuni: [
-            { errore: "Chiamare un hook dentro un if", soluzione: "Chiama gli hook sempre allo stesso livello, mai dentro condizioni o cicli." },
-            { errore: "Usare un hook fuori da un componente funzione", soluzione: "Gli hook vanno chiamati solo dentro componenti funzione o altri hook." },
+        glossary: [],
+        commonMistakes: [
+            { mistake: "Chiamare un hook dentro un if", solution: "Chiama gli hook sempre allo stesso livello, mai dentro condizioni o cicli." },
+            { mistake: "Usare un hook fuori da un componente funzione", solution: "Gli hook vanno chiamati solo dentro componenti funzione o altri hook." },
         ],
-        tag: ["react", "hooks"],
+        tags: ["react", "hooks"],
         ...overrides,
     };
 }
 
 test("writerAgent + notesArchive: un appunto scritto è poi elencabile e leggibile", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+    const notesDir = await createTempNotesDir();
     try {
         const archivist = { selectFolder: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
+        const writer = createWriterAgent({ notesDir, logger: silentLogger, archivist });
 
-        const scritta = await writer.write(notaValida());
+        const written = await writer.write(validNote());
 
-        const cartelle = await listCartelle(notesDir);
-        assert.deepEqual(cartelle, [{ cartella: "react", numeroAppunti: 1 }]);
+        const folders = await listFolders(notesDir);
+        assert.deepEqual(folders, [{ folder: "react", noteCount: 1 }]);
 
-        const appunti = await listAppunti(notesDir, "react");
-        assert.equal(appunti.length, 1);
-        assert.equal(appunti[0].nomeFile, scritta.nomeFile);
-        assert.equal(appunti[0].titolo, "Introduzione agli Hooks");
+        const notes = await listNotes(notesDir, "react");
+        assert.equal(notes.length, 1);
+        assert.equal(notes[0].fileName, written.fileName);
+        assert.equal(notes[0].title, "Introduzione agli Hooks");
 
-        const letto = await leggiAppunto(notesDir, "react", scritta.nomeFile);
-        assert.equal(letto.formato, "json");
-        assert.equal(letto.nota.titolo, "Introduzione agli Hooks");
+        const read = await readNote(notesDir, "react", written.fileName);
+        assert.equal(read.format, "json");
+        assert.equal(read.note.title, "Introduzione agli Hooks");
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
 test("writerAgent: un titolo con backslash e newline produce un frontmatter YAML valido", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+    const notesDir = await createTempNotesDir();
     try {
         const archivist = { selectFolder: () => "regex" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
+        const writer = createWriterAgent({ notesDir, logger: silentLogger, archivist });
 
         // "\d" letterale (comune in un appunto su regex) e una newline reale nel
         // titolo: senza escaping corretto il backslash lascia le virgolette non
         // bilanciate, e la newline spezza lo scalare YAML su più righe.
-        const titoloProblematico = 'Pattern "\\d" su più righe\ntitolo';
-        const scritta = await writer.write(notaValida({ titolo: titoloProblematico }));
+        const problematicTitle = 'Pattern "\\d" su più righe\ntitolo';
+        const written = await writer.write(validNote({ title: problematicTitle }));
 
-        const contenuto = await fs.readFile(scritta.percorso, "utf-8");
-        const righeTitolo = contenuto.split("\n").filter((riga) => riga.startsWith("titolo:"));
+        const content = await fs.readFile(written.path, "utf-8");
+        const titleLines = content.split("\n").filter((line) => line.startsWith("title:"));
 
-        assert.equal(righeTitolo.length, 1, "il valore deve restare su una sola riga");
+        assert.equal(titleLines.length, 1, "il valore deve restare su una sola riga");
         // Stringa tra virgolette con escape bilanciati: ogni backslash deve
         // essere seguito da un carattere che chiude una coppia di escape,
         // altrimenti una `"` interna verrebbe letta come chiusura anticipata
         // (o un backslash finale "mangerebbe" la virgoletta di chiusura vera).
-        assert.match(righeTitolo[0], /^titolo: "(?:[^"\\]|\\.)*"$/);
+        assert.match(titleLines[0], /^title: "(?:[^"\\]|\\.)*"$/);
 
         // Il sidecar JSON (mai passato per l'escaping YAML) resta fedele all'originale.
-        const letto = await leggiAppunto(notesDir, "regex", scritta.nomeFile);
-        assert.equal(letto.nota.titolo, titoloProblematico);
+        const read = await readNote(notesDir, "regex", written.fileName);
+        assert.equal(read.note.title, problematicTitle);
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
 test("writerAgent: un titolo con tentativo di path traversal produce comunque un file contenuto nella notesDir", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+    const notesDir = await createTempNotesDir();
     try {
         const archivist = { selectFolder: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
+        const writer = createWriterAgent({ notesDir, logger: silentLogger, archivist });
 
-        const scritta = await writer.write(notaValida({ titolo: "../../../etc/passwd" }));
-        const percorsoRisolto = path.resolve(scritta.percorso);
-        const relative = path.relative(path.resolve(notesDir), percorsoRisolto);
+        const written = await writer.write(validNote({ title: "../../../etc/passwd" }));
+        const resolvedPath = path.resolve(written.path);
+        const relative = path.relative(path.resolve(notesDir), resolvedPath);
 
         assert.ok(!relative.startsWith(".."));
         assert.ok(!path.isAbsolute(relative));

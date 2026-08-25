@@ -10,7 +10,7 @@ const EnvSchema = z.object({
     BRAVE_API_KEY: z.string().min(1, "BRAVE_API_KEY mancante: impostala nel file .env"),
     PORT: z.coerce.number().int().positive().default(3000),
     MODEL_NAME: z.string().default("claude-haiku-4-5"),
-    NOTES_DIR: z.string().default("data/appunti"),
+    NOTES_DIR: z.string().default("data/notes"),
     MAX_GENERATION_ATTEMPTS: z.coerce.number().int().positive().default(3),
     MODEL_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
     SEARCH_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
@@ -23,12 +23,12 @@ const EnvSchema = z.object({
 const parsed = EnvSchema.safeParse(process.env);
 
 if (!parsed.success) {
-    // Se la validazione fallisce, creo un messaggio di errore leggibile che mi 
+    // Se la validazione fallisce, creo un messaggio di errore leggibile che mi
     // dice esattamente quale variabile manca o è sbagliata.
-    const messaggio = parsed.error.issues
+    const message = parsed.error.issues
         .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
         .join("; ");
-    throw new Error(`Configurazione non valida: ${messaggio}`);
+    throw new Error(`Configurazione non valida: ${message}`);
 }
 
 // Esporto un oggetto 'settings' pulito. Così, nel resto dell'app, non dovrò mai

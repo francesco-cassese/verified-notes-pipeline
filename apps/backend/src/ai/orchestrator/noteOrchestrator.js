@@ -1,8 +1,8 @@
 import { ErrorCodes } from "../../utils/errors.js";
 
 function createNoteOrchestrator({ generator, validator, reviewer, writer, logger, maxAttempts }) {
-    async function run(argomento, opts = {}) {
-        const { onFase } = opts;
+    async function run(topic, opts = {}) {
+        const { onPhase } = opts;
         let lastIssues = [];
         // Le fonti trovate dipendono solo dall'argomento, non dal contenuto della
         // bozza: se un retry è scattato per un rifiuto di validator/reviewer
@@ -10,35 +10,35 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
         // precedente sono ancora valide. Le teniamo in cache per evitare di rifare
         // ricerca web + fetch delle pagine ad ogni retry, che non cambierebbe nulla
         // nel risultato ma costerebbe tempo e chiamate all'API di ricerca.
-        let risultatiRicercaCache = null;
+        let searchResultsCache = null;
 
         // Solo il ciclo generate -> validate viene ripetuto: è l'unico passaggio
         // realmente non deterministico. La scrittura su disco resta fuori dal
         // ciclo (vedi sotto): un errore lì non va ritentato alla cieca.
         for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            logger.info("orchestrator", "Tentativo di generazione", { argomento, attempt });
+            logger.info("orchestrator", "Tentativo di generazione", { topic, attempt });
 
             // Arricchisce ogni evento di fase con il tentativo corrente: così chi
             // emette l'evento (qui o dentro generator.generate) non deve conoscere
             // maxAttempts, lo aggiunge un solo punto centrale.
-            const emettiFase = (evento) => onFase?.({ ...evento, tentativo: attempt, tentativiMax: maxAttempts });
+            const emitPhase = (event) => onPhase?.({ ...event, attempt, maxAttempts });
 
             let draft;
-            let risultatiRicerca;
+            let searchResults;
             try {
-                ({ draft, risultatiRicerca } = await generator.generate(argomento, {
+                ({ draft, searchResults } = await generator.generate(topic, {
                     feedback: lastIssues,
-                    onFase: emettiFase,
-                    risultatiRicercaCache,
+                    onPhase: emitPhase,
+                    searchResultsCache,
                 }));
-                risultatiRicercaCache = risultatiRicerca;
+                searchResultsCache = searchResults;
             } catch (error) {
                 if (error.code === ErrorCodes.NO_OFFICIAL_SOURCE_ERROR) {
                     // Non retryabile: la ricerca per questo argomento è deterministica,
                     // un nuovo tentativo darebbe lo stesso risultato vuoto e sprecherebbe
                     // solo altre chiamate. Ci fermiamo qui, senza aver speso token sul modello.
                     logger.warn("orchestrator", "Nessuna fonte ufficiale, interrotto senza ritentare", {
-                        argomento,
+                        topic,
                         attempt,
                     });
                     return { status: "failed", reason: "no_official_source", attempts: attempt };
@@ -53,10 +53,10 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
                 }
 
                 logger.error("orchestrator", "Generazione fallita", {
-                    argomento,
+                    topic,
                     attempt,
-                    errore: error.message,
-                    causa: error.cause?.message ?? error.cause,
+                    error: error.message,
+                    cause: error.cause?.message ?? error.cause,
                 });
                 if (attempt === maxAttempts) {
                     return { status: "failed", reason: "generation", attempts: attempt };
@@ -64,13 +64,13 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
                 continue;
             }
 
-            emettiFase({ fase: "controllo-struttura", messaggio: "Controllo della struttura e delle fonti..." });
-            const result = validator.validate(draft, risultatiRicerca.map((r) => r.url));
+            emitPhase({ phase: "structure-check", message: "Controllo della struttura e delle fonti..." });
+            const result = validator.validate(draft, searchResults.map((r) => r.url));
 
             if (!result.success) {
                 lastIssues = result.issues;
                 logger.warn("orchestrator", "Validazione fallita, ripeto con feedback", {
-                    argomento,
+                    topic,
                     attempt,
                     issues: lastIssues,
                 });
@@ -88,10 +88,10 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
             // schema e nel prompt, solo la chiamata è unica: dimezza i token di
             // contesto (bozza+fonti incollate una volta sola) rispetto a chiamate
             // separate.
-            emettiFase({ fase: "revisione", messaggio: "Controllo del contenuto, del livello, delle fonti e delle best practice..." });
-            let esitoRevisione;
+            emitPhase({ phase: "review", message: "Controllo del contenuto, del livello, delle fonti e delle best practice..." });
+            let reviewResult;
             try {
-                esitoRevisione = await reviewer.review(argomento, result.data, risultatiRicerca);
+                reviewResult = await reviewer.review(topic, result.data, searchResults);
             } catch (error) {
                 // Come per il generator: se la risposta del Reviewer ha violato lo
                 // schema (es. un campo annidato arrivato come stringa invece che
@@ -102,10 +102,10 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
                 }
 
                 logger.error("orchestrator", "Revisione fallita", {
-                    argomento,
+                    topic,
                     attempt,
-                    errore: error.message,
-                    causa: error.cause?.message ?? error.cause,
+                    error: error.message,
+                    cause: error.cause?.message ?? error.cause,
                 });
                 if (attempt === maxAttempts) {
                     return { status: "failed", reason: "generation", attempts: attempt };
@@ -113,21 +113,21 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
                 continue;
             }
 
-            const problemiPerimetro = esitoRevisione.perimetro.approvato ? [] : esitoRevisione.perimetro.motivi;
-            const problemiAderenza = esitoRevisione.aderenza.aderente ? [] : esitoRevisione.aderenza.motivi;
-            const problemiBestPractice = esitoRevisione.bestPractice.aggiornato ? [] : esitoRevisione.bestPractice.motivi;
+            const scopeIssues = reviewResult.scope.approved ? [] : reviewResult.scope.reasons;
+            const adherenceIssues = reviewResult.adherence.adherent ? [] : reviewResult.adherence.reasons;
+            const bestPracticeIssues = reviewResult.bestPractice.upToDate ? [] : reviewResult.bestPractice.reasons;
 
-            if (problemiPerimetro.length > 0 || problemiAderenza.length > 0 || problemiBestPractice.length > 0) {
-                lastIssues = [...problemiPerimetro, ...problemiAderenza, ...problemiBestPractice];
+            if (scopeIssues.length > 0 || adherenceIssues.length > 0 || bestPracticeIssues.length > 0) {
+                lastIssues = [...scopeIssues, ...adherenceIssues, ...bestPracticeIssues];
                 logger.warn("orchestrator", "Revisione non superata, ripeto con feedback", {
-                    argomento,
+                    topic,
                     attempt,
-                    motivi: lastIssues,
+                    reasons: lastIssues,
                 });
                 continue;
             }
 
-            emettiFase({ fase: "salvataggio", messaggio: "Formattazione e salvataggio del documento..." });
+            emitPhase({ phase: "saving", message: "Formattazione e salvataggio del documento..." });
             try {
                 const written = await writer.write(result.data);
                 return { status: "success", note: written, attempts: attempt };
@@ -135,10 +135,10 @@ function createNoteOrchestrator({ generator, validator, reviewer, writer, logger
                 // Rifiuto di sicurezza (path traversal) o errore disco: non retryabile,
                 // fallisce subito l'intera esecuzione con un motivo distinto.
                 logger.error("orchestrator", "Scrittura dell'appunto fallita", {
-                    argomento,
+                    topic,
                     attempt,
-                    codice: error.code,
-                    errore: error.message,
+                    code: error.code,
+                    error: error.message,
                 });
                 return { status: "failed", reason: "write", attempts: attempt };
             }

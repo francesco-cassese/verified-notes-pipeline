@@ -5,119 +5,119 @@ import os from "node:os";
 import path from "node:path";
 import createWriterAgent from "../../../src/ai/agents/writerAgent.js";
 
-const loggerSilenzioso = { info() {}, warn() {}, error() {} };
+const silentLogger = { info() {}, warn() {}, error() {} };
 
-async function creaNotesDirTemporanea() {
+async function createTempNotesDir() {
     return fs.mkdtemp(path.join(os.tmpdir(), "writer-test-"));
 }
 
-function notaValida(overrides = {}) {
+function validNote(overrides = {}) {
     return {
-        modulo: "React.js",
-        titolo: "Introduzione agli Hooks",
-        argomento: "hooks react",
-        sezioni: [{ titolo: "Cos'è un hook", contenuto: "Un hook è una funzione speciale." }],
-        fonti: [{ url: "https://react.dev/learn/hooks", titolo: "React Hooks" }],
+        module: "React.js",
+        title: "Introduzione agli Hooks",
+        topic: "hooks react",
+        sections: [{ title: "Cos'è un hook", content: "Un hook è una funzione speciale." }],
+        sources: [{ url: "https://react.dev/learn/hooks", title: "React Hooks" }],
         keyTakeaways: ["Gli hook si usano solo nei componenti funzione."],
-        glossario: [],
-        erroriComuni: [
-            { errore: "Chiamare un hook dentro un if", soluzione: "Chiama gli hook sempre allo stesso livello." },
+        glossary: [],
+        commonMistakes: [
+            { mistake: "Chiamare un hook dentro un if", solution: "Chiama gli hook sempre allo stesso livello." },
         ],
-        tag: ["react", "hooks"],
+        tags: ["react", "hooks"],
         ...overrides,
     };
 }
 
 test("write: usa la cartella scelta dall'archivist, non lo slug diretto del modulo", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+    const notesDir = await createTempNotesDir();
     try {
         // "React.js" slugificato darebbe "react-js": l'archivist qui restituisce
         // deliberatamente qualcos'altro, per verificare che write() usi il suo
         // risultato e non ricalcoli la cartella da sé.
-        const archivist = { selectFolder: (modulo) => { assert.equal(modulo, "React.js"); return "react"; } };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
+        const archivist = { selectFolder: (module) => { assert.equal(module, "React.js"); return "react"; } };
+        const writer = createWriterAgent({ notesDir, logger: silentLogger, archivist });
 
-        const scritta = await writer.write(notaValida());
+        const written = await writer.write(validNote());
 
-        assert.equal(scritta.cartella, "react");
-        assert.equal(scritta.percorsoRelativo.split(path.sep)[0], "react");
+        assert.equal(written.folder, "react");
+        assert.equal(written.relativePath.split(path.sep)[0], "react");
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
 test("write: il markdown include tutte le sezioni attese e omette il glossario se vuoto", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+    const notesDir = await createTempNotesDir();
     try {
         const archivist = { selectFolder: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
+        const writer = createWriterAgent({ notesDir, logger: silentLogger, archivist });
 
-        const scritta = await writer.write(notaValida({ glossario: [] }));
-        const contenuto = await fs.readFile(scritta.percorso, "utf-8");
+        const written = await writer.write(validNote({ glossary: [] }));
+        const content = await fs.readFile(written.path, "utf-8");
 
-        assert.match(contenuto, /^# Introduzione agli Hooks$/m);
-        assert.match(contenuto, /^## 📍 Indice Rapido$/m);
-        assert.match(contenuto, /^## Cos'è un hook$/m);
-        assert.match(contenuto, /^## ⚠️ Errori Comuni$/m);
-        assert.match(contenuto, /^## 🔗 Risorse e Documentazione$/m);
-        assert.match(contenuto, /^## 🚀 Key Takeaways$/m);
-        assert.doesNotMatch(contenuto, /Glossario/);
+        assert.match(content, /^# Introduzione agli Hooks$/m);
+        assert.match(content, /^## 📍 Indice Rapido$/m);
+        assert.match(content, /^## Cos'è un hook$/m);
+        assert.match(content, /^## ⚠️ Errori Comuni$/m);
+        assert.match(content, /^## 🔗 Risorse e Documentazione$/m);
+        assert.match(content, /^## 🚀 Key Takeaways$/m);
+        assert.doesNotMatch(content, /Glossario/);
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
 test("write: il markdown include il glossario quando presente", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+    const notesDir = await createTempNotesDir();
     try {
         const archivist = { selectFolder: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
+        const writer = createWriterAgent({ notesDir, logger: silentLogger, archivist });
 
-        const scritta = await writer.write(notaValida({
-            glossario: [{ termine: "Hook", definizioneFormale: "Funzione che aggancia stato/lifecycle.", spiegazioneInformale: "Un modo per usare stato nei componenti funzione." }],
+        const written = await writer.write(validNote({
+            glossary: [{ term: "Hook", formalDefinition: "Funzione che aggancia stato/lifecycle.", informalExplanation: "Un modo per usare stato nei componenti funzione." }],
         }));
-        const contenuto = await fs.readFile(scritta.percorso, "utf-8");
+        const content = await fs.readFile(written.path, "utf-8");
 
-        assert.match(contenuto, /^## 📖 Glossario$/m);
-        assert.match(contenuto, /Hook/);
+        assert.match(content, /^## 📖 Glossario$/m);
+        assert.match(content, /Hook/);
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
 test("write: fonti vuote mostrano il messaggio placeholder invece di una lista vuota", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+    const notesDir = await createTempNotesDir();
     try {
         const archivist = { selectFolder: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
+        const writer = createWriterAgent({ notesDir, logger: silentLogger, archivist });
 
-        const scritta = await writer.write(notaValida({ fonti: [] }));
-        const contenuto = await fs.readFile(scritta.percorso, "utf-8");
+        const written = await writer.write(validNote({ sources: [] }));
+        const content = await fs.readFile(written.path, "utf-8");
 
-        assert.match(contenuto, /Nessuna fonte ufficiale citata\./);
+        assert.match(content, /Nessuna fonte ufficiale citata\./);
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }
 });
 
-test("write: il risultato include i metadati generati (id, creatoIl, nomeFile, percorsoRelativo)", async () => {
-    const notesDir = await creaNotesDirTemporanea();
+test("write: il risultato include i metadati generati (id, createdAt, fileName, relativePath)", async () => {
+    const notesDir = await createTempNotesDir();
     try {
         const archivist = { selectFolder: () => "react" };
-        const writer = createWriterAgent({ notesDir, logger: loggerSilenzioso, archivist });
+        const writer = createWriterAgent({ notesDir, logger: silentLogger, archivist });
 
-        const scritta = await writer.write(notaValida());
+        const written = await writer.write(validNote());
 
-        assert.match(scritta.id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
-        assert.ok(!Number.isNaN(Date.parse(scritta.creatoIl)));
-        assert.match(scritta.nomeFile, /^introduzione-agli-hooks-[0-9a-f]{8}\.md$/);
-        assert.equal(scritta.percorsoRelativo, path.join("react", scritta.nomeFile));
+        assert.match(written.id, /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+        assert.ok(!Number.isNaN(Date.parse(written.createdAt)));
+        assert.match(written.fileName, /^introduzione-agli-hooks-[0-9a-f]{8}\.md$/);
+        assert.equal(written.relativePath, path.join("react", written.fileName));
 
         // Il sidecar JSON contiene esattamente gli stessi metadati.
-        const jsonPath = scritta.percorso.replace(/\.md$/, ".json");
+        const jsonPath = written.path.replace(/\.md$/, ".json");
         const sidecar = JSON.parse(await fs.readFile(jsonPath, "utf-8"));
-        assert.equal(sidecar.id, scritta.id);
-        assert.equal(sidecar.titolo, "Introduzione agli Hooks");
+        assert.equal(sidecar.id, written.id);
+        assert.equal(sidecar.title, "Introduzione agli Hooks");
     } finally {
         await fs.rm(notesDir, { recursive: true, force: true });
     }

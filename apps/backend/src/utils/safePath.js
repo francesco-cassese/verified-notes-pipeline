@@ -35,48 +35,48 @@ function slugify(input) {
 }
 
 // baseDir è sempre quello fisso da settings.notesDir, mai derivato dalla richiesta.
-// Ogni appunto va in <baseDir>/<modulo>/<file>: un solo livello di sottocartella,
+// Ogni appunto va in <baseDir>/<module>/<file>: un solo livello di sottocartella,
 // anch'esso passato da slugify (quindi mai un input libero). Il controllo di
 // contenimento sotto verifica che il percorso risolto corrisponda esattamente
 // a quella struttura prevista, né più annidata né fuori da baseDir.
-function resolveSafeNotePath(baseDir, rawTitle, rawModulo) {
+function resolveSafeNotePath(baseDir, rawTitle, rawModule) {
     const slug = slugify(rawTitle);
-    const cartella = slugify(rawModulo);
-    const suffisso = crypto.randomUUID().slice(0, 8);
-    const fileName = `${slug}-${suffisso}.md`;
-    const percorsoRelativo = path.join(cartella, fileName);
+    const folder = slugify(rawModule);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const fileName = `${slug}-${suffix}.md`;
+    const relativePath = path.join(folder, fileName);
 
     const resolvedBase = path.resolve(baseDir);
-    const filePath = path.resolve(resolvedBase, percorsoRelativo);
+    const filePath = path.resolve(resolvedBase, relativePath);
 
     // Controllo di contenimento: è la vera difesa (lo slugify sopra è difesa in
     // profondità). Il percorso risolto deve corrispondere esattamente a
-    // "<cartella>/<fileName>" dentro baseDir: niente risalite (..), niente path
+    // "<folder>/<fileName>" dentro baseDir: niente risalite (..), niente path
     // assoluti, niente livelli di annidamento in più rispetto a quello previsto.
     const relative = path.relative(resolvedBase, filePath);
 
-    if (relative !== percorsoRelativo) {
+    if (relative !== relativePath) {
         throw new AgentError(
             "Percorso del file non sicuro: tentativo di scrittura fuori dalla directory degli appunti.",
             ErrorCodes.PATH_TRAVERSAL_ERROR
         );
     }
 
-    return { filePath, fileName, cartella, percorsoRelativo };
+    return { filePath, fileName, folder, relativePath };
 }
 
 // Nome cartella/file già slugificato in scrittura (vedi resolveSafeNotePath):
 // qui, in lettura, l'input arriva invece grezzo dai parametri URL, quindi va
 // validato con una whitelist stretta invece di essere ri-slugificato (un
-// nomeFile ri-slugificato non corrisponderebbe più al file realmente su disco).
-const NOME_CARTELLA_VALIDO = /^[a-z0-9-]+$/;
-const NOME_FILE_VALIDO = /^[a-z0-9-]+\.(md|json)$/;
+// fileName ri-slugificato non corrisponderebbe più al file realmente su disco).
+const VALID_FOLDER_NAME = /^[a-z0-9-]+$/;
+const VALID_FILE_NAME = /^[a-z0-9-]+\.(md|json)$/;
 
 // Stesso controllo di contenimento di resolveSafeNotePath, ma per la lettura:
-// cartella e nomeFile devono già rispettare il formato prodotto in scrittura,
+// folder e fileName devono già rispettare il formato prodotto in scrittura,
 // e il percorso risolto deve restare dentro baseDir senza risalite (..).
-function resolveSafeReadPath(baseDir, cartella, nomeFile) {
-    if (!NOME_CARTELLA_VALIDO.test(cartella) || !NOME_FILE_VALIDO.test(nomeFile)) {
+function resolveSafeReadPath(baseDir, folder, fileName) {
+    if (!VALID_FOLDER_NAME.test(folder) || !VALID_FILE_NAME.test(fileName)) {
         throw new AgentError(
             "Percorso non valido: cartella o nome file non ammessi.",
             ErrorCodes.PATH_TRAVERSAL_ERROR
@@ -84,11 +84,11 @@ function resolveSafeReadPath(baseDir, cartella, nomeFile) {
     }
 
     const resolvedBase = path.resolve(baseDir);
-    const percorsoRelativo = path.join(cartella, nomeFile);
-    const filePath = path.resolve(resolvedBase, percorsoRelativo);
+    const relativePath = path.join(folder, fileName);
+    const filePath = path.resolve(resolvedBase, relativePath);
     const relative = path.relative(resolvedBase, filePath);
 
-    if (relative !== percorsoRelativo) {
+    if (relative !== relativePath) {
         throw new AgentError(
             "Percorso del file non sicuro: tentativo di lettura fuori dalla directory degli appunti.",
             ErrorCodes.PATH_TRAVERSAL_ERROR
@@ -98,10 +98,10 @@ function resolveSafeReadPath(baseDir, cartella, nomeFile) {
     return filePath;
 }
 
-// Usata anche per validare :cartella nell'elenco appunti (non solo nella
+// Usata anche per validare :folder nell'elenco appunti (non solo nella
 // lettura di un singolo file): stessa whitelist, nessuna risalita possibile.
-function isNomeCartellaValido(cartella) {
-    return NOME_CARTELLA_VALIDO.test(cartella);
+function isValidFolderName(folder) {
+    return VALID_FOLDER_NAME.test(folder);
 }
 
-export { slugify, resolveSafeNotePath, resolveSafeReadPath, isNomeCartellaValido };
+export { slugify, resolveSafeNotePath, resolveSafeReadPath, isValidFolderName };

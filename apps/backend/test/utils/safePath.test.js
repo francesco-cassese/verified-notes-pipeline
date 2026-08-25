@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import path from "node:path";
-import { slugify, resolveSafeNotePath, resolveSafeReadPath, isNomeCartellaValido } from "../../src/utils/safePath.js";
+import { slugify, resolveSafeNotePath, resolveSafeReadPath, isValidFolderName } from "../../src/utils/safePath.js";
 import { ErrorCodes } from "../../src/utils/errors.js";
 
 test("slugify: minuscolo, spazi e simboli diventano un trattino singolo", () => {
@@ -33,7 +33,7 @@ test("slugify: rifiuta input che non produce alcun carattere ammesso", () => {
 });
 
 test("resolveSafeNotePath: un titolo con tentativo di risalita resta comunque contenuto in baseDir", () => {
-    const baseDir = path.join(process.cwd(), "note-di-test");
+    const baseDir = path.join(process.cwd(), "test-notes");
     const { filePath } = resolveSafeNotePath(baseDir, "../../../etc/passwd", "../../etc");
     const relative = path.relative(path.resolve(baseDir), filePath);
 
@@ -41,32 +41,32 @@ test("resolveSafeNotePath: un titolo con tentativo di risalita resta comunque co
     assert.ok(!path.isAbsolute(relative));
 });
 
-test("resolveSafeNotePath: il percorso risultante rispetta <cartella>/<slug>-<suffisso>.md", () => {
-    const baseDir = path.join(process.cwd(), "note-di-test");
-    const { fileName, cartella, percorsoRelativo } = resolveSafeNotePath(baseDir, "Il Mio Titolo", "React");
+test("resolveSafeNotePath: il percorso risultante rispetta <folder>/<slug>-<suffix>.md", () => {
+    const baseDir = path.join(process.cwd(), "test-notes");
+    const { fileName, folder, relativePath } = resolveSafeNotePath(baseDir, "Il Mio Titolo", "React");
 
     assert.match(fileName, /^il-mio-titolo-[0-9a-f]{8}\.md$/);
-    assert.equal(cartella, "react");
-    assert.equal(percorsoRelativo, path.join("react", fileName));
+    assert.equal(folder, "react");
+    assert.equal(relativePath, path.join("react", fileName));
 });
 
-test("resolveSafeReadPath: accetta cartella e nomeFile nel formato prodotto in scrittura", () => {
-    const baseDir = path.join(process.cwd(), "note-di-test");
+test("resolveSafeReadPath: accetta folder e fileName nel formato prodotto in scrittura", () => {
+    const baseDir = path.join(process.cwd(), "test-notes");
     const filePath = resolveSafeReadPath(baseDir, "react", "hooks-abc12345.md");
 
     assert.equal(filePath, path.join(path.resolve(baseDir), "react", "hooks-abc12345.md"));
 });
 
 test("resolveSafeReadPath: rifiuta una cartella con risalita (..)", () => {
-    const baseDir = path.join(process.cwd(), "note-di-test");
+    const baseDir = path.join(process.cwd(), "test-notes");
     assert.throws(
         () => resolveSafeReadPath(baseDir, "..", "hooks.md"),
         (err) => err.code === ErrorCodes.PATH_TRAVERSAL_ERROR
     );
 });
 
-test("resolveSafeReadPath: rifiuta un nomeFile con separatori di percorso", () => {
-    const baseDir = path.join(process.cwd(), "note-di-test");
+test("resolveSafeReadPath: rifiuta un fileName con separatori di percorso", () => {
+    const baseDir = path.join(process.cwd(), "test-notes");
     assert.throws(
         () => resolveSafeReadPath(baseDir, "react", "../../etc/passwd.md"),
         (err) => err.code === ErrorCodes.PATH_TRAVERSAL_ERROR
@@ -74,15 +74,15 @@ test("resolveSafeReadPath: rifiuta un nomeFile con separatori di percorso", () =
 });
 
 test("resolveSafeReadPath: rifiuta estensioni diverse da .md/.json", () => {
-    const baseDir = path.join(process.cwd(), "note-di-test");
+    const baseDir = path.join(process.cwd(), "test-notes");
     assert.throws(
         () => resolveSafeReadPath(baseDir, "react", "hooks.txt"),
         (err) => err.code === ErrorCodes.PATH_TRAVERSAL_ERROR
     );
 });
 
-test("isNomeCartellaValido: valida solo [a-z0-9-]", () => {
-    assert.equal(isNomeCartellaValido("react-native"), true);
-    assert.equal(isNomeCartellaValido("../etc"), false);
-    assert.equal(isNomeCartellaValido("React"), false);
+test("isValidFolderName: valida solo [a-z0-9-]", () => {
+    assert.equal(isValidFolderName("react-native"), true);
+    assert.equal(isValidFolderName("../etc"), false);
+    assert.equal(isValidFolderName("React"), false);
 });

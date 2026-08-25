@@ -1,6 +1,6 @@
 node_modules
 .env
-apps/backend/data/appunti
+apps/backend/data/notes
 apps/backend/public
 apps/frontend/dist
 output

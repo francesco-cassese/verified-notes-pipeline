@@ -9,7 +9,7 @@ import { isOfficialUrl } from "../../utils/officialSources.js";
 
 // Imposto questo limite perché l'LLM ha una finestra di contesto limitata:
 // troppi risultati consumano troppi token e rischiano di distrarre il modello.
-const MAX_RISULTATI = 3;
+const MAX_RESULTS = 3;
 
 // Tetto ai caratteri di testo estratto per singola pagina: senza questo limite
 // una pagina di doc molto lunga (es. un intero manuale) esaurirebbe da sola il
@@ -20,13 +20,13 @@ const MAX_RISULTATI = 3;
 // ciò che il controllo di aderenza alle fonti è pensato per rifiutare. 20000
 // copre molto più contenuto reale a un costo aggiuntivo minimo (pochi
 // centesimi per tentativo con il modello di default).
-const MAX_CONTENUTO_CHARS = 20_000;
+const MAX_CONTENT_CHARS = 20_000;
 
 // Blocca SSRF verso la rete interna: anche se l'hostname è su un dominio della
 // whitelist (isOfficialUrl), un DNS compromesso/rebinding potrebbe farlo
 // risolvere a un IP privato. Whitelist di dominio e "non è un IP privato" sono
 // due controlli indipendenti, va fatto entrambi.
-function isIndirizzoPrivato(ip) {
+function isPrivateAddress(ip) {
     if (net.isIPv4(ip)) {
         const [a, b] = ip.split(".").map(Number);
         return a === 0 || a === 10 || a === 127 || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168);
@@ -45,7 +45,7 @@ function isIndirizzoPrivato(ip) {
 // malevolo (TTL bassissimo, DNS rebinding) potrebbe restituire un IP pubblico
 // al controllo e uno privato alla connessione reale: qui non c'è finestra fra
 // "controllato" e "usato", sono la stessa chiamata.
-function lookupPubblicoSolo(hostname, options, callback) {
+function publicOnlyLookup(hostname, options, callback) {
     dns.lookup(hostname, options, (err, address, family) => {
         if (err) return callback(err);
 
@@ -53,8 +53,8 @@ function lookupPubblicoSolo(hostname, options, callback) {
         // array di { address, family }, non una singola stringa. Blocco se manca
         // del tutto una risposta o se anche solo uno degli indirizzi risolti è
         // privato, invece di controllare solo il primo.
-        const risolti = Array.isArray(address) ? address : [{ address, family }];
-        if (risolti.length === 0 || risolti.some((r) => isIndirizzoPrivato(r.address))) {
+        const resolved = Array.isArray(address) ? address : [{ address, family }];
+        if (resolved.length === 0 || resolved.some((r) => isPrivateAddress(r.address))) {
             return callback(new Error(`Indirizzo non pubblico bloccato per ${hostname}`));
         }
         callback(null, address, family);
@@ -62,14 +62,14 @@ function lookupPubblicoSolo(hostname, options, callback) {
 }
 
 // Dispatcher condiviso: ogni richiesta fatta attraverso questo Agent risolve
-// l'host con lookupPubblicoSolo, quindi non può mai stabilire una connessione
+// l'host con publicOnlyLookup, quindi non può mai stabilire una connessione
 // verso un IP privato, indipendentemente dal dominio (anche se in whitelist).
 // Va abbinato a undiciFetch (sotto), non al fetch globale: mescolare un Agent
 // creato dal pacchetto undici con l'implementazione di fetch interna di Node
 // (versione diversa di undici) fa fallire la richiesta con un errore interno
 // oscuro ("invalid onRequestStart method").
-const agentSoloPubblico = new Agent({
-    connect: { lookup: lookupPubblicoSolo },
+const publicOnlyAgent = new Agent({
+    connect: { lookup: publicOnlyLookup },
 });
 
 // Recupera il testo effettivo di una pagina ufficiale, non solo titolo/URL dei
@@ -86,7 +86,7 @@ async function fetchPageText(url) {
         const response = await undiciFetch(url, {
             headers: { Accept: "text/html" },
             signal: controller.signal,
-            dispatcher: agentSoloPubblico,
+            dispatcher: publicOnlyAgent,
         });
 
         if (!response.ok) return null;
@@ -102,10 +102,10 @@ async function fetchPageText(url) {
         const $ = cheerio.load(html);
         $("script, style, nav, header, footer, noscript, svg").remove();
 
-        const testo = $("body").text().replace(/\s+/g, " ").trim();
-        if (!testo) return null;
+        const text = $("body").text().replace(/\s+/g, " ").trim();
+        if (!text) return null;
 
-        return testo.slice(0, MAX_CONTENUTO_CHARS);
+        return text.slice(0, MAX_CONTENT_CHARS);
     } catch {
         // Fetch fallito o andato in timeout: nessun testo, ma non blocco la ricerca.
         return null;
@@ -123,7 +123,7 @@ const searchTool = tool(
         // fallire il filtro isOfficialUrl anche quando la doc ufficiale esiste.
         url.searchParams.set("q", `${query} official documentation`);
 
-        // Uso AbortController perché se la API è lenta, non voglio 
+        // Uso AbortController perché se la API è lenta, non voglio
         // che l'intera applicazione resti bloccata in attesa.
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), settings.searchTimeoutMs);
@@ -156,26 +156,26 @@ const searchTool = tool(
 
         const data = await response.json();
 
-        // Filtro per dominio ufficiale PRIMA di tagliare a MAX_RISULTATI: se filtrassi
+        // Filtro per dominio ufficiale PRIMA di tagliare a MAX_RESULTS: se filtrassi
         // dopo, rischierei di scartare risultati ufficiali che Brave ha messo oltre
         // i primi 3 e tenere invece risultati non ufficiali arrivati prima.
-        const risultatiFiltrati = (data.web?.results ?? [])
+        const filteredResults = (data.web?.results ?? [])
             .filter((r) => isOfficialUrl(r.url))
-            .slice(0, MAX_RISULTATI);
+            .slice(0, MAX_RESULTS);
 
         // Fetch del contenuto in parallelo: sono richieste indipendenti verso
         // domini diversi, farle in sequenza sommerebbe i tempi inutilmente.
-        const risultatiGrezzi = await Promise.all(
-            risultatiFiltrati.map(async (r) => ({
+        const rawResults = await Promise.all(
+            filteredResults.map(async (r) => ({
                 title: r.title,
                 url: r.url,
-                contenuto: await fetchPageText(r.url),
+                content: await fetchPageText(r.url),
             }))
         );
 
         const output = {
-            argomento: query,
-            dati_grezzi: risultatiGrezzi
+            topic: query,
+            rawResults
         };
 
         return JSON.stringify(output);

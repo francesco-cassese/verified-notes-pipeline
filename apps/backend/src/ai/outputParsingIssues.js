@@ -12,11 +12,11 @@
 // quindi best-effort, con fallback a nessun feedback specifico se il formato
 // cambia o l'errore non è nella forma attesa (es. l'intero oggetto di
 // verdetto è arrivato come stringa invece che come oggetto annidato).
-function estraiIssuesDaOutputParserException(error) {
+function extractIssuesFromOutputParserException(error) {
     if (error?.name !== "OutputParserException" || typeof error.message !== "string") return null;
 
-    const senzaTroubleshooting = error.message.split("\n\nTroubleshooting URL:")[0];
-    const match = /Error: (\[[\s\S]*\])$/.exec(senzaTroubleshooting);
+    const withoutTroubleshooting = error.message.split("\n\nTroubleshooting URL:")[0];
+    const match = /Error: (\[[\s\S]*\])$/.exec(withoutTroubleshooting);
     if (!match) return null;
 
     try {
@@ -24,12 +24,12 @@ function estraiIssuesDaOutputParserException(error) {
         if (!Array.isArray(issues) || issues.length === 0) return null;
 
         return issues.map((issue) => {
-            const percorso = Array.isArray(issue.path) && issue.path.length > 0 ? issue.path.join(".") : null;
-            return percorso ? `Il campo "${percorso}" non rispetta lo schema: ${issue.message}` : issue.message;
+            const path = Array.isArray(issue.path) && issue.path.length > 0 ? issue.path.join(".") : null;
+            return path ? `Il campo "${path}" non rispetta lo schema: ${issue.message}` : issue.message;
         });
     } catch {
         return null;
     }
 }
 
-export { estraiIssuesDaOutputParserException };
+export { extractIssuesFromOutputParserException };

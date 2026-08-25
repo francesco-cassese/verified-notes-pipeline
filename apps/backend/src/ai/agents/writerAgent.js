@@ -14,8 +14,8 @@ import { AgentError, ErrorCodes } from "../../utils/errors.js";
 // Anche newline/tab letterali dentro il valore romperebbero lo scalare
 // "tra virgolette" su una riga sola, quindi li converto nella sequenza di
 // escape corrispondente invece di lasciarli passare come caratteri di controllo.
-function escapeYaml(valore) {
-    return String(valore)
+function escapeYaml(value) {
+    return String(value)
         .replace(/\\/g, "\\\\")
         .replace(/"/g, '\\"')
         .replace(/\n/g, "\\n")
@@ -23,11 +23,11 @@ function escapeYaml(valore) {
         .replace(/\t/g, "\\t");
 }
 
-function escapeCellaTabella(valore) {
-    return String(valore).replace(/\|/g, "\\|").replace(/\n/g, " ");
+function escapeTableCell(value) {
+    return String(value).replace(/\|/g, "\\|").replace(/\n/g, " ");
 }
 
-function formattaData(iso) {
+function formatDate(iso) {
     return new Date(iso).toLocaleDateString("it-IT", { year: "numeric", month: "2-digit", day: "2-digit" });
 }
 
@@ -35,97 +35,97 @@ function formattaData(iso) {
 // sezione: è la stessa logica (minuscolo, niente diacritici, solo [a-z0-9-])
 // che la maggior parte dei renderer Markdown usa per gli id delle intestazioni,
 // quindi i link dell'indice puntano davvero alla sezione corrispondente.
-function buildIndice(sezioni, haGlossario) {
-    const voci = sezioni.map((s) => `[${s.titolo}](#${slugify(s.titolo)})`);
-    voci.push("[Errori Comuni](#errori-comuni)");
-    voci.push("[Risorse e Documentazione](#risorse-e-documentazione)");
-    voci.push("[Key Takeaways](#key-takeaways)");
-    if (haGlossario) voci.push("[Glossario](#glossario)");
+function buildTableOfContents(sections, hasGlossary) {
+    const entries = sections.map((s) => `[${s.title}](#${slugify(s.title)})`);
+    entries.push("[Errori Comuni](#errori-comuni)");
+    entries.push("[Risorse e Documentazione](#risorse-e-documentazione)");
+    entries.push("[Key Takeaways](#key-takeaways)");
+    if (hasGlossary) entries.push("[Glossario](#glossario)");
 
-    return voci.map((voce, i) => `${i + 1}. ${voce}`).join("\n");
+    return entries.map((entry, i) => `${i + 1}. ${entry}`).join("\n");
 }
 
-function buildSezioni(sezioni) {
-    return sezioni.map((s) => `## ${s.titolo}\n\n${s.contenuto}`).join("\n\n");
+function buildSections(sections) {
+    return sections.map((s) => `## ${s.title}\n\n${s.content}`).join("\n\n");
 }
 
-function buildRisorse(fonti) {
-    if (fonti.length === 0) return "Nessuna fonte ufficiale citata.";
-    return fonti.map((f) => `- [${f.titolo || f.url}](${f.url})`).join("\n");
+function buildResources(sources) {
+    if (sources.length === 0) return "Nessuna fonte ufficiale citata.";
+    return sources.map((s) => `- [${s.title || s.url}](${s.url})`).join("\n");
 }
 
 function buildTakeaways(keyTakeaways) {
-    return keyTakeaways.map((k) => `- ${k}`).join("\n");
+    return keyTakeaways.map((takeaway) => `- ${takeaway}`).join("\n");
 }
 
-function buildErroriComuni(erroriComuni) {
-    const righe = erroriComuni
-        .map((e) => `| ${escapeCellaTabella(e.errore)} | ${escapeCellaTabella(e.soluzione)} |`)
+function buildCommonMistakes(commonMistakes) {
+    const rows = commonMistakes
+        .map((m) => `| ${escapeTableCell(m.mistake)} | ${escapeTableCell(m.solution)} |`)
         .join("\n");
 
-    return `| Errore | Come risolverlo |\n| --- | --- |\n${righe}`;
+    return `| Errore | Come risolverlo |\n| --- | --- |\n${rows}`;
 }
 
-function buildGlossario(glossario) {
-    if (glossario.length === 0) return "";
-    const righe = glossario
-        .map((v) => `| ${escapeCellaTabella(v.termine)} | ${escapeCellaTabella(v.definizioneFormale)} | ${escapeCellaTabella(v.spiegazioneInformale)} |`)
+function buildGlossary(glossary) {
+    if (glossary.length === 0) return "";
+    const rows = glossary
+        .map((entry) => `| ${escapeTableCell(entry.term)} | ${escapeTableCell(entry.formalDefinition)} | ${escapeTableCell(entry.informalExplanation)} |`)
         .join("\n");
 
-    return `\n\n## 📖 Glossario\n\n| Termine | Definizione Formale | Spiegazione Informale |\n| --- | --- | --- |\n${righe}`;
+    return `\n\n## 📖 Glossario\n\n| Termine | Definizione Formale | Spiegazione Informale |\n| --- | --- | --- |\n${rows}`;
 }
 
 function buildMarkdown(note, meta) {
-    const fontiYaml = note.fonti.length > 0
-        ? note.fonti.map((f) => `  - url: "${escapeYaml(f.url)}"${f.titolo ? `\n    titolo: "${escapeYaml(f.titolo)}"` : ""}`).join("\n")
+    const sourcesYaml = note.sources.length > 0
+        ? note.sources.map((s) => `  - url: "${escapeYaml(s.url)}"${s.title ? `\n    title: "${escapeYaml(s.title)}"` : ""}`).join("\n")
         : "  []";
 
-    const tagYaml = note.tag.length > 0
-        ? note.tag.map((t) => `  - "${escapeYaml(t)}"`).join("\n")
+    const tagsYaml = note.tags.length > 0
+        ? note.tags.map((t) => `  - "${escapeYaml(t)}"`).join("\n")
         : "  []";
 
     const frontmatter = [
         "---",
-        `titolo: "${escapeYaml(note.titolo)}"`,
-        `modulo: "${escapeYaml(note.modulo)}"`,
-        `argomento: "${escapeYaml(note.argomento)}"`,
+        `title: "${escapeYaml(note.title)}"`,
+        `module: "${escapeYaml(note.module)}"`,
+        `topic: "${escapeYaml(note.topic)}"`,
         `id: ${meta.id}`,
-        `creatoIl: ${meta.creatoIl}`,
-        "fonti:",
-        fontiYaml,
-        "tag:",
-        tagYaml,
+        `createdAt: ${meta.createdAt}`,
+        "sources:",
+        sourcesYaml,
+        "tags:",
+        tagsYaml,
         "---",
     ].join("\n");
 
-    const haGlossario = note.glossario.length > 0;
+    const hasGlossary = note.glossary.length > 0;
 
-    const corpo = [
-        `# ${note.titolo}`,
-        `**Modulo:** ${note.modulo}  \n**Data:** ${formattaData(meta.creatoIl)}`,
-        `## 📍 Indice Rapido\n\n${buildIndice(note.sezioni, haGlossario)}`,
-        buildSezioni(note.sezioni),
-        `## ⚠️ Errori Comuni\n\n${buildErroriComuni(note.erroriComuni)}`,
-        `## 🔗 Risorse e Documentazione\n\n${buildRisorse(note.fonti)}`,
+    const body = [
+        `# ${note.title}`,
+        `**Modulo:** ${note.module}  \n**Data:** ${formatDate(meta.createdAt)}`,
+        `## 📍 Indice Rapido\n\n${buildTableOfContents(note.sections, hasGlossary)}`,
+        buildSections(note.sections),
+        `## ⚠️ Errori Comuni\n\n${buildCommonMistakes(note.commonMistakes)}`,
+        `## 🔗 Risorse e Documentazione\n\n${buildResources(note.sources)}`,
         `## 🚀 Key Takeaways\n\n${buildTakeaways(note.keyTakeaways)}`,
-    ].join("\n\n") + buildGlossario(note.glossario) + "\n";
+    ].join("\n\n") + buildGlossary(note.glossary) + "\n";
 
-    return `${frontmatter}\n\n${corpo}`;
+    return `${frontmatter}\n\n${body}`;
 }
 
 function createWriterAgent({ notesDir, logger, archivist }) {
     async function write(note) {
         // La cartella non è più lo slug grezzo del modulo dedotto dal modello,
         // ma quella scelta dall'Archivist tramite il mapping hardcoded (o il
-        // fallback allo slug se il modulo non è ancora mappato). titolo e
-        // cartella passano comunque per resolveSafeNotePath, che li slugifica
+        // fallback allo slug se il modulo non è ancora mappato). title e
+        // folder passano comunque per resolveSafeNotePath, che li slugifica
         // di nuovo (idempotente) e verifica il contenimento come prima.
-        const cartellaCanonica = archivist.selectFolder(note.modulo);
-        const { filePath, fileName, cartella, percorsoRelativo } = resolveSafeNotePath(notesDir, note.titolo, cartellaCanonica);
+        const canonicalFolder = archivist.selectFolder(note.module);
+        const { filePath, fileName, folder, relativePath } = resolveSafeNotePath(notesDir, note.title, canonicalFolder);
 
         const id = crypto.randomUUID();
-        const creatoIl = new Date().toISOString();
-        const scritta = { ...note, id, nomeFile: fileName, cartella, percorsoRelativo, creatoIl };
+        const createdAt = new Date().toISOString();
+        const written = { ...note, id, fileName, folder, relativePath, createdAt };
 
         // Il .md resta la fonte "leggibile" (frontmatter + corpo formattato); il
         // .json accanto è un sidecar con gli stessi dati ancora strutturati, per
@@ -139,22 +139,22 @@ function createWriterAgent({ notesDir, logger, archivist }) {
             // mkdir sulla directory del file (non più solo su notesDir): crea anche
             // la sottocartella del modulo se non esiste già.
             await fs.mkdir(path.dirname(filePath), { recursive: true });
-            await fs.writeFile(filePath, buildMarkdown(note, { id, creatoIl }), "utf-8");
-            await fs.writeFile(jsonPath, JSON.stringify(scritta, null, 2), "utf-8");
+            await fs.writeFile(filePath, buildMarkdown(note, { id, createdAt }), "utf-8");
+            await fs.writeFile(jsonPath, JSON.stringify(written, null, 2), "utf-8");
         } catch (error) {
             throw new AgentError(
-                `Scrittura dell'appunto su disco fallita: ${percorsoRelativo}`,
+                `Scrittura dell'appunto su disco fallita: ${relativePath}`,
                 ErrorCodes.WRITE_ERROR,
                 error
             );
         }
 
-        logger.info("writerAgent", "Appunto salvato su disco", { percorsoRelativo });
+        logger.info("writerAgent", "Appunto salvato su disco", { relativePath });
 
-        // Includo anche i campi della nota (sezioni, fonti, tag, ecc.) e non solo
-        // i metadati del file: così l'interfaccia può mostrare subito il
+        // Includo anche i campi della nota (sections, sources, tags, ecc.) e non
+        // solo i metadati del file: così l'interfaccia può mostrare subito il
         // risultato senza dover fare una seconda richiesta per leggere il file.
-        return { ...scritta, percorso: filePath };
+        return { ...written, path: filePath };
     }
 
     return { write };
