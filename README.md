@@ -42,7 +42,7 @@ Nel caso migliore una generazione richiede quindi 1 ricerca web + 2 chiamate LLM
 
 Prima ancora di avviare la pipeline, il controller confronta l'argomento richiesto con quelli già salvati in archivio (case-insensitive): se un appunto per lo stesso argomento esiste già, restituisce subito un evento `duplicate` con il riferimento all'appunto esistente, a costo zero (nessuna ricerca, nessuna chiamata LLM).
 
-L'avanzamento viene trasmesso al frontend via Server-Sent Events man mano che ogni fase viene eseguita, dato che una generazione completa può richiedere diverse chiamate LLM in sequenza.
+L'avanzamento viene trasmesso al frontend via Server-Sent Events man mano che ogni fase viene eseguita, dato che una generazione completa può richiedere diverse chiamate LLM in sequenza. Lo stato della generazione in corso vive in un context React sollevato sopra le route (`GenerationContext`), così cambiare pagina durante una generazione non la interrompe né la fa perdere; un `ErrorBoundary` con azione "Riprova" avvolge le route e si resetta automaticamente a ogni cambio di percorso.
 
 ## Sicurezza
 
@@ -75,8 +75,10 @@ apps/
   frontend/
     src/
       pages/             # pagina di generazione + archivio
-      components/
+      components/        # include ErrorBoundary con retry, resettato per route
+      context/            # GenerationContext: stato di generazione condiviso tra le route
       hooks/
+      utils/
 ```
 
 ## Come avviarlo
