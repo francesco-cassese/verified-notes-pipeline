@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import ErrorMessage from "../components/ErrorMessage.jsx";
-import { useGeneration } from "../context/GenerationContext.jsx";
+import { useGeneration } from "../hooks/useGeneration.js";
 import styles from "./GeneratorPage.module.css";
 
 function GeneratorPage() {

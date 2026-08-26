@@ -1,6 +1,5 @@
-import { createContext, useCallback, useContext, useState } from "react";
-
-const GenerationContext = createContext(null);
+import { useCallback, useState } from "react";
+import { GenerationContext } from "./generationContext.js";
 
 // Sollevato sopra <Routes> in App.jsx così l'avanzamento di una generazione
 // sopravvive alla navigazione: prima viveva come stato locale di GeneratorPage,
@@ -96,10 +95,4 @@ export function GenerationProvider({ children }) {
     };
 
     return <GenerationContext.Provider value={value}>{children}</GenerationContext.Provider>;
-}
-
-export function useGeneration() {
-    const context = useContext(GenerationContext);
-    if (!context) throw new Error("useGeneration must be used within a GenerationProvider");
-    return context;
 }
