@@ -1,8 +1,16 @@
+/*------------------------------------*\
+  #COMPONENT: MARKDOWN VIEWER
+\*------------------------------------*/
+
 .markdownViewer {
     margin-top: 1.25rem;
     line-height: 1.65;
     font-size: 1rem;
 }
+
+/*------------------------------------*\
+  #TESTO
+\*------------------------------------*/
 
 .markdownViewer h2 {
     font-size: 1.3rem;
@@ -29,6 +37,10 @@
     color: var(--accent);
 }
 
+/*------------------------------------*\
+  #BLOCCHI DI CODICE
+\*------------------------------------*/
+
 .markdownViewer pre {
     background: var(--chip-bg);
     border-radius: 8px;
@@ -45,6 +57,10 @@
     font-size: 0.85rem;
 }
 
+/*------------------------------------*\
+  #TABELLE
+\*------------------------------------*/
+
 .markdownViewer table {
     display: block;
     overflow-x: auto;
@@ -57,6 +73,10 @@
     padding: 0.5rem 0.6rem;
     border-bottom: 1px solid var(--border);
 }
+
+/*------------------------------------*\
+  #VARIANTI
+\*------------------------------------*/
 
 /* Applicata da Nota.jsx quando il viewer è già dentro una sezione titolata
    (niente margine extra in cima): prima era la regola incrociata

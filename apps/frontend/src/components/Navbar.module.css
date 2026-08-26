@@ -1,3 +1,7 @@
+/*------------------------------------*\
+  #COMPONENT: NAVBAR
+\*------------------------------------*/
+
 .navbar {
     position: sticky;
     top: 0;
@@ -18,12 +22,20 @@
     gap: 0.5rem 1rem;
 }
 
+/*------------------------------------*\
+  #BRAND
+\*------------------------------------*/
+
 .navbarBrand {
     font-weight: 700;
     font-size: 1.05rem;
     text-decoration: none;
     padding: 0.6rem 0;
 }
+
+/*------------------------------------*\
+  #LINK DI NAVIGAZIONE
+\*------------------------------------*/
 
 .navbarLinks {
     display: flex;
@@ -50,6 +62,10 @@
     color: var(--accent);
     border-bottom-color: var(--accent);
 }
+
+/*------------------------------------*\
+  #RESPONSIVE
+\*------------------------------------*/
 
 @media (max-width: 480px) {
     .navbarInner {

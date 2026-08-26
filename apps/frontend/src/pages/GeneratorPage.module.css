@@ -1,3 +1,7 @@
+/*------------------------------------*\
+  #CONFERMA DI SALVATAGGIO
+\*------------------------------------*/
+
 .saveConfirmation {
     background: var(--success-bg);
     border: 1px solid var(--success);
@@ -41,6 +45,10 @@
 .confirmationActions a:hover {
     text-decoration: underline;
 }
+
+/*------------------------------------*\
+  #AVVISO DUPLICATO
+\*------------------------------------*/
 
 .duplicateWarning {
     background: var(--warning-bg);

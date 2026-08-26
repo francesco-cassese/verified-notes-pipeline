@@ -1,6 +1,14 @@
+/*------------------------------------*\
+  #TITOLO CARTELLA
+\*------------------------------------*/
+
 .folderTitle {
     text-transform: capitalize;
 }
+
+/*------------------------------------*\
+  #LISTA NOTE
+\*------------------------------------*/
 
 .notesList {
     list-style: none;
@@ -10,6 +18,10 @@
     flex-direction: column;
     gap: 0.6rem;
 }
+
+/*------------------------------------*\
+  #RIGA NOTA
+\*------------------------------------*/
 
 .noteRow {
     display: flex;
@@ -38,6 +50,10 @@
     font-size: 0.9rem;
     white-space: nowrap;
 }
+
+/*------------------------------------*\
+  #RESPONSIVE
+\*------------------------------------*/
 
 @media (max-width: 480px) {
     .noteRow {

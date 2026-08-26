@@ -1,8 +1,16 @@
+/*------------------------------------*\
+  #GRIGLIA CARTELLE
+\*------------------------------------*/
+
 .foldersGrid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
     gap: 1rem;
 }
+
+/*------------------------------------*\
+  #CARTELLA
+\*------------------------------------*/
 
 .folderCard {
     display: flex;
